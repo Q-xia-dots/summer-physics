@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>summer物理 · 可操控的物理模型</title>
+<meta name="description" content="summer物理是一个可操控的物理模型库。拖动、调参、实时观察，让公式开始运动。">
+<meta name="theme-color" content="#f3eee4">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body id="top">
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <symbol id="sun-mark" viewBox="0 0 32 32">
+    <g fill="none" stroke="#24231f" stroke-width="1.15" stroke-linecap="round">
+      <path d="M16 4.2v3.4"/><path d="M16 24.4v3.4"/>
+      <path d="M4.2 16h3.4"/><path d="M24.4 16h3.4"/>
+      <path d="M7.6 7.6l2.4 2.4"/><path d="M22 22l2.4 2.4"/>
+      <path d="M24.4 7.6L22 10"/><path d="M10 22l-2.4 2.4"/>
+    </g>
+    <circle cx="16" cy="16" r="4.8" fill="#c9442f"/>
+  </symbol>
+</svg>
+
+<header class="site-nav">
+  <div class="shell nav-inner">
+    <a class="brand" href="#top" aria-label="summer物理首页">
+      <svg class="brand-mark" aria-hidden="true"><use href="#sun-mark"/></svg>
+      <span class="brand-name"><em>summer</em><span>物理</span></span>
+    </a>
+    <nav class="nav-links" aria-label="主导航">
+      <a href="#models" class="active">模型库</a>
+      <a href="#principles">设计原则</a>
+      <a href="#about">关于</a>
+    </nav>
+    <a class="nav-cta" href="#models">进入模型库 <span>↗</span></a>
+  </div>
+</header>
+
+<main id="main">
+  <section class="shell hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <div class="eyebrow">INTERACTIVE PHYSICS · 可操控物理模型</div>
+      <h1 id="hero-title"><span>让公式</span><span><em>动起来。</em></span></h1>
+      <p class="lede">summer物理 把课本里的物理模型，做成可以拖动、调参、实时观察的交互实验。不是看一段动画，而是亲手改变它。</p>
+      <div class="hero-actions">
+        <a class="btn primary" href="models/pendulum.html">打开单摆模型 <span class="arrow">↗</span></a>
+        <a class="btn ghost" href="#models">浏览模型库</a>
+      </div>
+      <div class="hero-facts" aria-label="网站信息">
+        <div><b>05</b><span>可交互模型</span></div>
+        <div><b>04</b><span>可调实验参数</span></div>
+        <div><b>实时</b><span>物理计算</span></div>
+      </div>
+    </div>
+
+    <div class="hero-stage">
+      <a class="live-card" href="models/pendulum.html" aria-label="打开单摆交互模型">
+        <canvas id="hero-canvas" aria-hidden="true"></canvas>
+        <span class="live-top">
+          <span class="live-pill"><i></i>LIVE PREVIEW</span>
+          <span class="live-angle" id="hero-angle">θ +30.0°</span>
+        </span>
+        <span class="live-bottom">
+          <span>
+            <span class="k">SIMPLE PENDULUM</span>
+            <b>单摆 · 点击进入</b>
+          </span>
+          <span class="live-open">进入模型 <span class="arrow">↗</span></span>
+        </span>
+      </a>
+      <div class="hero-note">
+        <span><b>L</b> = 1.20 m　·　<b>T</b> ≈ 2.23 s</span>
+        <span>01 / SIMPLE PENDULUM</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="shell section models-section" id="models" aria-labelledby="models-title">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">LIBRARY · 模型库</div>
+        <h2 id="models-title">从一条规律开始。</h2>
+      </div>
+      <p>每个模型都是一个可以直接打开的交互页面。拖动、调参、观察，公式不再停在纸面上。</p>
+    </div>
+
+    <article class="model-feature">
+      <a class="feature-visual" href="models/pendulum.html" aria-label="打开单摆模型">
+        <img src="assets/pendulum-preview.png" alt="单摆可操控模型界面预览：左侧是摆球与深金色摆线，右侧是参数控制台、能量条和振幅时间图像" loading="lazy">
+        <span class="feature-index">01</span>
+      </a>
+      <div class="feature-copy">
+        <div class="meta">
+          <span>力学</span>
+          <span>振动</span>
+          <span class="status"><i></i>可交互</span>
+        </div>
+        <h3>单摆</h3>
+        <p>拖动摆球改变起始角，调节摆长与重力，观察周期、能量和振幅—时间图像如何一起变化。</p>
+        <ul class="feature-list">
+          <li>拖动摆球</li>
+          <li>非线性周期</li>
+          <li>能量转化</li>
+        </ul>
+        <a class="btn primary" href="models/pendulum.html">打开模型 <span class="arrow">↗</span></a>
+      </div>
+    </article>
+
+    <article class="model-feature">
+      <a class="feature-visual" href="models/spring.html" aria-label="打开弹簧振子模型">
+        <img src="assets/spring-preview.png" alt="弹簧振子模型界面预览：竖直弹簧振子驱动横波，右侧是参数控制台，下方是振动图像和波动图像" loading="lazy">
+        <span class="feature-index">02</span>
+      </a>
+      <div class="feature-copy">
+        <div class="meta">
+          <span>力学</span>
+          <span>振动与波</span>
+          <span class="status"><i></i>可交互</span>
+        </div>
+        <h3>弹簧振子</h3>
+        <p>拖动质量块，改变质量、劲度系数、振幅与介质波速；在同一屏里对照振动图像、振动方程、波动图像与波动方程。</p>
+        <ul class="feature-list">
+          <li>振动 / 波动双图像</li>
+          <li>符号方程</li>
+          <li>波速与波长</li>
+        </ul>
+        <a class="btn primary" href="models/spring.html">打开模型 <span class="arrow">↗</span></a>
+      </div>
+    </article>
+
+    <article class="model-feature">
+      <a class="feature-visual" href="models/orbit.html" aria-label="打开天体轨道模型">
+        <img src="assets/orbit-preview.png" alt="天体轨道模型界面预览：地球位于中心，内圆轨道、转移椭圆与外圆轨道上标出 A、B 两点，卫星正在转移椭圆上运动" loading="lazy">
+        <span class="feature-index">03</span>
+      </a>
+      <div class="feature-copy">
+        <div class="meta">
+          <span>力学</span>
+          <span>天体运动</span>
+          <span class="status"><i></i>可交互</span>
+        </div>
+        <h3>天体轨道</h3>
+        <p>拖动小球到任意位置，比较加速度、速度与角速度；观察从内侧圆轨道经转移椭圆抵达外圆轨道的全过程，并用开普勒定律解释 A、B 两点。</p>
+        <ul class="feature-list">
+          <li>拖动小球</li>
+          <li>圆轨道与转移椭圆</li>
+          <li>A、B 切点对比</li>
+          <li>开普勒定律</li>
+        </ul>
+        <a class="btn primary" href="models/orbit.html">打开模型 <span class="arrow">↗</span></a>
+      </div>
+    </article>
+
+    <article class="model-feature">
+      <a class="feature-visual" href="models/electrostatics.html" aria-label="打开静电场模型">
+        <img src="assets/electrostatics-preview.png" alt="静电场模型界面预览：正电荷周围的电场线与等势线，右侧是场源设置、场强探针和试探电荷" loading="lazy">
+        <span class="feature-index">04</span>
+      </a>
+      <div class="feature-copy">
+        <div class="meta">
+          <span>电磁学</span>
+          <span>静电场</span>
+          <span class="status"><i></i>可交互</span>
+        </div>
+        <h3>静电场</h3>
+        <p>点电荷、等量异种、等量同种与电极板：移动鼠标测量场强，拖动试探电荷观察库仑力，并单独查看电场线或等势线。</p>
+        <ul class="feature-list">
+          <li>场强探针</li>
+          <li>电场线与等势线</li>
+          <li>四种场源</li>
+        </ul>
+        <a class="btn primary" href="models/electrostatics.html">打开模型 <span class="arrow">↗</span></a>
+      </div>
+    </article>
+
+    <article class="model-feature">
+      <a class="feature-visual" href="models/collision.html" aria-label="打开动量守恒模型">
+        <img src="assets/collision-preview.png" alt="动量守恒模型界面预览：两球在轨道上碰撞，右侧是质量、初速度、恢复系数与动量/动能读数" loading="lazy">
+        <span class="feature-index">05</span>
+      </a>
+      <div class="feature-copy">
+        <div class="meta">
+          <span>力学</span>
+          <span>动量</span>
+          <span class="status"><i></i>可交互</span>
+        </div>
+        <h3>动量守恒</h3>
+        <p>两球一维碰撞：弹性、非弹性与完全非弹性。调节质量、初速度和恢复系数，观察碰撞前后的动量与动能。</p>
+        <ul class="feature-list">
+          <li>三种碰撞</li>
+          <li>动量 / 动能对比</li>
+          <li>完全非弹性粘合</li>
+        </ul>
+        <a class="btn primary" href="models/collision.html">打开模型 <span class="arrow">↗</span></a>
+      </div>
+    </article>
+
+    <div class="roadmap" aria-label="后续模型计划">
+      <span class="label">接下来</span>
+      <ul>
+        <li>平抛运动</li>
+        <li>磁场与洛伦兹力</li>
+        <li>圆周运动</li>
+        <li>机械波</li>
+      </ul>
+      <span class="more">持续更新 · 每个模型都可操控</span>
+    </div>
+  </section>
+
+  <section class="principles" id="principles" aria-labelledby="principles-title">
+    <div class="shell section">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">APPROACH · 设计原则</div>
+          <h2 id="principles-title">不是演示，是实验。</h2>
+        </div>
+        <p>模型的价值不在于好看，而在于你改变一个量之后，它能诚实地回应。</p>
+      </div>
+      <div class="principle-grid">
+        <article class="principle">
+          <span class="num">01</span>
+          <h3>可操控</h3>
+          <p>拖动对象、拉动滑杆、暂停和复位。每一个参数都应该能改变，而不是只沿着一条预设动画播放。</p>
+        </article>
+        <article class="principle">
+          <span class="num">02</span>
+          <h3>真物理</h3>
+          <p>非线性方程、精确周期、阻尼耗散。动画服从计算，而不是先画好动画再补公式。</p>
+        </article>
+        <article class="principle">
+          <span class="num">03</span>
+          <h3>纸感极简</h3>
+          <p>米白、墨线、红与金。把视觉噪音降到最低，让注意力留在物理本身。</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="shell about" id="about" aria-labelledby="about-title">
+    <div>
+      <div class="eyebrow">ABOUT · 关于</div>
+      <h2 id="about-title">summer物理</h2>
+      <p>一个持续生长的交互物理模型库。为课堂演示，也为一个人在屏幕前把一个问题想明白。这里没有只能观看的动画，只有可以动手的实验。</p>
+    </div>
+    <aside class="about-card">
+      <p class="quote">“如果改变它，会发生什么？”</p>
+      <div class="sig"><span>这是每个模型试图回答的问题。</span><b>summer物理</b></div>
+    </aside>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="shell footer-inner">
+    <a class="footer-brand" href="#top" aria-label="回到 summer物理 首页">
+      <svg class="brand-mark" aria-hidden="true"><use href="#sun-mark"/></svg>
+      <span><em>summer</em>物理</span>
+    </a>
+    <span class="footer-note">可交互物理模型库 · 2026</span>
+    <div class="footer-links">
+      <a href="#models">模型库</a>
+      <a href="models/pendulum.html">单摆</a>
+      <a href="models/spring.html">弹簧振子</a>
+      <a href="models/orbit.html">天体轨道</a>
+      <a href="models/electrostatics.html">静电场</a>
+      <a href="models/collision.html">动量守恒</a>
+      <a href="#top">回到顶部</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,1167 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>单摆 · summer物理</title>
+<meta name="description" content="单摆可操控模型：拖动摆球、调节参数，观察周期、能量与振幅时间图像。">
+<meta name="theme-color" content="#f3eee4">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --paper:#f3eee4;
+    --paper-hi:#fbf8f1;
+    --ink:#24231f;
+    --ink-soft:#59554b;
+    --muted:#8b8375;
+    --red:#c9442f;
+    --red-deep:#a72f1e;
+    --blue:#2d6f78;
+    --ochre:#a6621d;
+    --line:rgba(36,35,31,.13);
+    --line-soft:rgba(36,35,31,.075);
+    --serif:"Noto Serif SC","Songti SC","STSong",Georgia,serif;
+    --sans:"Noto Sans SC","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+    --mono:"Cascadia Mono","SFMono-Regular",Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;overflow:hidden;color:var(--ink);font-family:var(--sans);
+    background:
+      radial-gradient(1100px 680px at 8% -8%,rgba(255,255,255,.72),transparent 64%),
+      radial-gradient(1000px 760px at 98% 104%,rgba(188,158,108,.19),transparent 62%),
+      var(--paper);
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(rgba(58,48,34,.13) .55px,transparent .7px);
+    background-size:3px 3px;opacity:.24;mix-blend-mode:multiply;
+  }
+  button,input{font:inherit;color:inherit}
+  button{cursor:pointer}
+  #app{
+    position:relative;z-index:1;height:100dvh;
+    display:grid;grid-template-columns:minmax(0,1fr) 392px;grid-template-rows:auto minmax(0,1fr);
+    gap:16px 30px;padding:28px 32px 28px 40px;max-width:1720px;margin:0 auto;
+  }
+
+  /* ---------------------------------------------------------- header */
+  header{grid-column:1;grid-row:1;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;min-width:0;padding:1px 2px 0}
+  .kicker{display:flex;align-items:center;gap:10px;color:var(--red);font-size:9.5px;font-weight:700;letter-spacing:.26em;text-transform:uppercase}
+  .kicker::before{content:"";width:28px;height:1px;background:var(--red)}
+  .kicker a{color:var(--red);text-decoration:none;text-transform:none;letter-spacing:.08em;border-bottom:1px solid transparent;transition:border-color .18s,color .18s}
+  .kicker a:hover{color:var(--red-deep);border-color:rgba(201,68,47,.45)}
+  .kicker .kicker-slash{color:var(--muted);opacity:.55;font-weight:400;letter-spacing:0;margin:0 1px}
+  .title-line{display:flex;align-items:baseline;gap:16px;margin:6px 0 4px}
+  h1{margin:0;font-family:var(--serif);font-size:clamp(38px,4.3vw,56px);line-height:1.06;font-weight:700;letter-spacing:.04em}
+  .title-line .en{font-size:9px;letter-spacing:.22em;color:var(--muted);font-weight:600;white-space:nowrap}
+  header p{margin:0;font-size:12.5px;line-height:1.65;color:var(--ink-soft);letter-spacing:.012em}
+  .formula-stamp{display:flex;flex-direction:column;align-items:flex-end;gap:3px;padding-left:22px;border-left:1px solid var(--line);white-space:nowrap;margin-bottom:3px}
+  .formula-stamp span{font-size:8.5px;letter-spacing:.17em;color:var(--muted);font-weight:600}
+  .formula-stamp b{font-family:var(--serif);font-style:italic;font-size:18px;font-weight:500;letter-spacing:.01em}
+
+  /* ---------------------------------------------------------- stage */
+  .stage{
+    grid-column:1;grid-row:2;position:relative;min-width:0;min-height:0;overflow:hidden;
+    border:1px solid rgba(36,35,31,.15);border-radius:26px;background:var(--paper-hi);
+    box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 26px 60px -48px rgba(56,40,22,.7);
+  }
+  .stage::after{content:"";position:absolute;inset:8px;border-radius:19px;border:1px solid rgba(36,35,31,.045);pointer-events:none}
+  #canvas{display:block;width:100%;height:100%;touch-action:none;cursor:default}
+  .stage-top{position:absolute;left:20px;right:20px;top:15px;display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:none}
+  .stage-tag{display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:.17em;color:var(--muted);font-weight:600}
+  .stage-tag span{display:inline-grid;place-items:center;width:21px;height:21px;border:1px solid var(--line);border-radius:50%;font-family:var(--mono);font-size:8.5px;letter-spacing:0;color:var(--ink-soft)}
+  .status{display:flex;align-items:center;gap:7px;padding:5px 10px 5px 9px;border:1px solid rgba(36,35,31,.12);border-radius:999px;background:rgba(250,247,239,.72);backdrop-filter:blur(8px);font-size:10px;color:var(--ink-soft);letter-spacing:.04em}
+  .status i{width:5px;height:5px;border-radius:50%;background:var(--red);box-shadow:0 0 0 0 rgba(201,68,47,.45);animation:pulse 1.9s ease-out infinite}
+  .status b{font-weight:500}
+  .status.paused i{background:#9d9588;animation:none;box-shadow:none}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(201,68,47,.4)}70%{box-shadow:0 0 0 6px rgba(201,68,47,0)}100%{box-shadow:0 0 0 0 rgba(201,68,47,0)}}
+  .stage-bottom{position:absolute;left:20px;right:20px;bottom:15px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;pointer-events:none}
+  .legend{display:flex;align-items:center;gap:13px;padding:6px 10px;border:1px solid rgba(36,35,31,.09);border-radius:9px;background:rgba(250,247,239,.72);backdrop-filter:blur(6px);font-size:9.5px;color:var(--ink-soft);opacity:0;transform:translateY(4px);transition:opacity .22s,transform .22s}
+  .legend.show{opacity:1;transform:none}
+  .legend span{display:flex;align-items:center;gap:5px;white-space:nowrap}
+  .legend i{display:block;width:13px;height:2px;border-radius:2px;position:relative}
+  .legend i::after{content:"";position:absolute;right:-1px;top:-2.5px;border-left:4px solid currentColor;border-top:3px solid transparent;border-bottom:3px solid transparent}
+  .legend .v{background:var(--blue);color:var(--blue)}
+  .legend .f{background:var(--ochre);color:var(--ochre)}
+  .hint{display:flex;align-items:center;gap:7px;margin-left:auto;padding:6px 11px;border:1px solid rgba(36,35,31,.1);border-radius:999px;background:rgba(250,247,239,.76);backdrop-filter:blur(6px);font-size:9.5px;color:var(--ink-soft);letter-spacing:.03em;transition:opacity .35s,transform .35s}
+  .hint::before{content:"";width:6px;height:6px;border-radius:50%;border:1px solid var(--red);box-shadow:inset 0 0 0 1.5px rgba(201,68,47,.25)}
+  .hint.used{opacity:0;transform:translateY(5px)}
+
+  /* ---------------------------------------------------------- panel */
+  .panel{
+    grid-column:2;grid-row:2;align-self:start;min-height:0;max-height:calc(100dvh - 56px);overflow:auto;
+    padding:22px 22px 18px;border:1px solid rgba(36,35,31,.14);border-radius:26px;
+    background:linear-gradient(168deg,rgba(255,253,248,.79),rgba(255,251,241,.56));
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    box-shadow:0 1px 0 rgba(255,255,255,.86) inset,0 32px 80px -58px rgba(56,40,22,.62);
+    scrollbar-width:none;
+  }
+  .panel::-webkit-scrollbar{display:none}
+  .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:15px}
+  .eyebrow{font-size:8.5px;font-weight:700;letter-spacing:.23em;color:var(--red)}
+  .panel h2{font-family:var(--serif);font-size:23px;line-height:1.2;font-weight:700;margin:3px 0 0;letter-spacing:.03em}
+  .panel-note{font-size:8.5px;letter-spacing:.12em;color:var(--muted);padding-top:4px;white-space:nowrap}
+  .panel-note::before{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--red);margin-right:6px;vertical-align:1px}
+
+  .control{display:block;margin:0 0 11px}
+  .control:last-child{margin-bottom:0}
+  .control-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:1px}
+  .control-head .name{font-size:11.5px;color:var(--ink-soft);letter-spacing:.02em}
+  .control-head em{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--ink);margin-left:3px}
+  .control-head .value{font-family:var(--mono);font-size:11px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .control-head .value b{font-weight:600}
+  .control-head .value small{font-family:var(--sans);font-size:8.5px;color:var(--muted);margin-left:2px}
+
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;display:block;width:100%;height:20px;margin:1px 0 0;
+    background:transparent;outline:none;--fill:50%;
+  }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:3px;border-radius:3px;
+    background:linear-gradient(to right,var(--red) 0 var(--fill),rgba(36,35,31,.14) var(--fill) 100%);
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:15px;height:15px;margin-top:-6px;border-radius:50%;
+    background:var(--paper-hi);border:2px solid var(--red);box-shadow:0 2px 5px rgba(60,40,25,.2);
+    transition:transform .12s;
+  }
+  input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
+  input[type=range]::-moz-range-track{height:3px;border-radius:3px;background:rgba(36,35,31,.14)}
+  input[type=range]::-moz-range-progress{height:3px;border-radius:3px;background:var(--red)}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:2px solid var(--red);border-radius:50%;background:var(--paper-hi)}
+  input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px rgba(201,68,47,.17)}
+
+  .transport{display:grid;grid-template-columns:1.45fr 1fr;gap:8px;margin-top:15px}
+  .btn{
+    display:flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 12px;
+    border:1px solid rgba(36,35,31,.17);border-radius:11px;background:rgba(255,255,255,.25);
+    font-size:11.5px;font-weight:500;letter-spacing:.03em;transition:background .15s,border-color .15s,transform .1s;
+  }
+  .btn:hover{background:rgba(255,255,255,.55)}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--ink);border-color:var(--ink);color:#fbf8f1}
+  .btn.primary:hover{background:#13120f;border-color:#13120f}
+  .btn svg{width:13px;height:13px;display:block}
+  .btn.primary svg{width:11px;height:11px}
+
+  .speed-row{display:flex;align-items:center;justify-content:space-between;margin-top:9px;font-size:9.5px;color:var(--muted);letter-spacing:.08em}
+  .seg{display:flex;gap:2px;padding:2px;border:1px solid rgba(36,35,31,.1);border-radius:8px;background:rgba(255,255,255,.16)}
+  .seg button{border:0;background:none;padding:3px 7px;border-radius:6px;font-size:9px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .seg button:hover{color:var(--ink-soft)}
+  .seg button.on{background:rgba(201,68,47,.1);color:var(--red);font-weight:600}
+  .section-rule{height:1px;margin:13px 0 10px;background:linear-gradient(90deg,var(--line),var(--line-soft) 72%,transparent)}
+
+  .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+  .stat{padding:0 8px;border-left:1px solid rgba(36,35,31,.1);min-width:0}
+  .stat:first-child{padding-left:0;border-left:0}
+  .stat .k{display:block;font-size:8px;letter-spacing:.04em;color:var(--muted);margin-bottom:2px;white-space:nowrap}
+  .stat .v{display:flex;align-items:baseline;gap:2px;font-family:var(--serif);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .stat .v b{font-size:16.5px;font-weight:600;line-height:1.15}
+  .stat .v small{font-family:var(--sans);font-size:8px;font-weight:400;color:var(--muted)}
+
+  .energy-strip{margin-top:9px;padding:7px 9px 6px;border:1px solid rgba(36,35,31,.09);border-radius:11px;background:rgba(255,255,255,.18)}
+  .energy-meta{display:flex;align-items:baseline;gap:11px;font-size:9px;color:var(--muted);letter-spacing:.02em}
+  .energy-meta span{display:flex;align-items:baseline;gap:4px;white-space:nowrap}
+  .energy-meta i{display:inline-block;width:5px;height:5px;border-radius:50%;transform:translateY(-1px)}
+  .energy-meta .k{background:var(--red)}
+  .energy-meta .u{background:#b78310}
+  .energy-meta b{font-family:var(--mono);font-size:9.5px;font-weight:500;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+  .energy-meta .e-total{margin-left:auto;color:var(--ink-soft)}
+  .energy-meta .e-total b{color:var(--ink);font-weight:600}
+  .energy-track{display:flex;height:7px;margin-top:5px;border-radius:4px;background:rgba(36,35,31,.09);overflow:hidden}
+  .energy-track i{display:block;width:0;height:100%;transition:width .1s linear}
+  #eKBar{background:var(--red)}
+  #eUBar{background:#b78310}
+
+  .chart-card{margin-top:10px;padding:5px 7px 3px;border:1px solid rgba(36,35,31,.1);border-radius:13px;background:rgba(255,255,255,.2)}
+  #chart{display:block;width:100%;height:112px}
+
+  .switches{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+  .switch{
+    display:flex;align-items:center;gap:8px;min-width:0;height:31px;padding:0 9px;
+    border:1px solid rgba(36,35,31,.11);border-radius:9px;background:rgba(255,255,255,.14);
+    font-size:9.5px;color:var(--muted);text-align:left;transition:background .15s,border-color .15s,color .15s;
+  }
+  .switch:hover{border-color:rgba(36,35,31,.2);color:var(--ink-soft)}
+  .switch .track{position:relative;flex:0 0 auto;width:22px;height:12px;border-radius:99px;background:rgba(36,35,31,.15);transition:background .18s}
+  .switch .track::after{content:"";position:absolute;left:2px;top:2px;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.18);transition:transform .18s}
+  .switch.on{color:var(--ink);border-color:rgba(201,68,47,.26);background:rgba(201,68,47,.055)}
+  .switch.on .track{background:var(--red)}
+  .switch.on .track::after{transform:translateX(10px)}
+
+  @media (max-height:830px){
+    #app{padding-top:20px;padding-bottom:20px}
+    .panel{padding:17px 19px 14px;max-height:calc(100dvh - 40px)}
+    .panel-head{margin-bottom:11px}
+    .panel h2{font-size:21px}
+    .control{margin-bottom:8px}
+    .transport{margin-top:11px}
+    .section-rule{margin:10px 0 8px}
+    #chart{height:90px}
+  }
+  @media (max-height:790px){
+    .panel{padding:15px 19px 13px}
+    .panel-head{margin-bottom:9px}
+    .control{margin-bottom:7px}
+    .transport{margin-top:9px}
+    .section-rule{margin:9px 0 8px}
+    #chart{height:78px}
+  }
+  @media (max-width:1080px){
+    #app{grid-template-columns:minmax(0,1fr) 352px;gap:14px 22px;padding:24px 24px 24px 30px}
+    .formula-stamp{display:none}
+  }
+  @media (max-width:900px){
+    body{overflow:auto}
+    #app{display:flex;flex-direction:column;height:auto;min-height:100dvh;gap:14px;padding:18px}
+    header{order:0}
+    .formula-stamp{display:none}
+    h1{font-size:40px}
+    .title-line .en{display:none}
+    .stage{order:1;width:100%;height:60vh;min-height:410px;flex:none}
+    .panel{order:2;width:100%;max-height:none;align-self:stretch;overflow:visible}
+    #chart{height:112px}
+  }
+  @media (max-width:560px){
+    #app{padding:13px;gap:12px}
+    header p{font-size:11px}
+    h1{font-size:34px}
+    .stage{height:55vh;min-height:350px;border-radius:20px}
+    .stage-top{left:14px;right:14px;top:12px}
+    .stage-bottom{left:14px;right:14px;bottom:12px}
+    .hint{font-size:8.5px}
+    .legend{font-size:8.5px;gap:8px}
+    .panel{padding:18px 16px 16px;border-radius:20px}
+    .stats .v b{font-size:15px}
+    .stat .v small{font-size:7px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .status i{animation:none}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <div class="kicker"><a href="../index.html" title="返回 summer物理首页">← summer物理</a><span class="kicker-slash">/</span>MECHANICS · 力学实验</div>
+      <div class="title-line"><h1>单摆</h1><span class="en">SIMPLE PENDULUM</span></div>
+      <p>拖动摆球设定起始角度，松手后观察它在平衡位置两侧往复运动。</p>
+    </div>
+    <div class="formula-stamp"><span>SMALL-ANGLE PERIOD</span><b>T₀ = 2π√(L/g)</b></div>
+  </header>
+
+  <section class="stage" id="stage">
+    <canvas id="canvas"></canvas>
+    <div class="stage-top">
+      <div class="stage-tag"><span>01</span>单摆模型</div>
+      <div class="status" id="status"><i></i><b id="statusText">振动中</b></div>
+    </div>
+    <div class="stage-bottom">
+      <div class="legend" id="legend">
+        <span><i class="f"></i>回复力 F = −mg sin θ</span>
+      </div>
+      <div class="hint" id="hint">拖动摆球 · 松手释放</div>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="panel-head">
+      <div><div class="eyebrow">CONTROL PANEL</div><h2>实验参数</h2></div>
+      <span class="panel-note">实时模拟</span>
+    </div>
+
+    <div class="controls">
+      <label class="control">
+        <span class="control-head"><span class="name">摆长<em>L</em></span><span class="value"><b id="lVal">1.20</b><small>m</small></span></span>
+        <input id="lRange" type="range" min="0.50" max="1.50" step="0.01" value="1.20" aria-label="摆长">
+      </label>
+      <label class="control">
+        <span class="control-head"><span class="name">起始角<em>θ₀</em></span><span class="value"><b id="aVal">30</b><small>°</small></span></span>
+        <input id="aRange" type="range" min="1" max="80" step="1" value="30" aria-label="起始角">
+      </label>
+      <label class="control">
+        <span class="control-head"><span class="name">重力加速度<em>g</em></span><span class="value"><b id="gVal">9.8</b><small>m/s²</small></span></span>
+        <input id="gRange" type="range" min="1.6" max="20" step="0.1" value="9.8" aria-label="重力加速度">
+      </label>
+      <label class="control">
+        <span class="control-head"><span class="name">阻尼系数<em>b</em></span><span class="value"><b id="bVal">0.020</b><small>s⁻¹</small></span></span>
+        <input id="bRange" type="range" min="0" max="0.30" step="0.005" value="0.02" aria-label="阻尼系数">
+      </label>
+    </div>
+
+    <div class="transport">
+      <button id="playBtn" class="btn primary" type="button">
+        <span id="playIcon"></span><span id="playText">暂停</span>
+      </button>
+      <button id="resetBtn" class="btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/></svg>
+        <span>复位</span>
+      </button>
+    </div>
+
+    <div class="speed-row">
+      <span>演示速度</span>
+      <div class="seg" id="speedSeg">
+        <button type="button" data-speed="0.5">0.5×</button>
+        <button type="button" data-speed="1" class="on">1×</button>
+        <button type="button" data-speed="1.5">1.5×</button>
+      </div>
+    </div>
+
+    <div class="section-rule"></div>
+
+    <div class="stats">
+      <div class="stat"><span class="k">摆角 θ</span><span class="v"><b id="thetaVal">+30.0</b><small>°</small></span></div>
+      <div class="stat"><span class="k">角速度 ω</span><span class="v"><b id="omegaVal">0.00</b><small>rad/s</small></span></div>
+      <div class="stat"><span class="k">线速度 v</span><span class="v"><b id="vVal">0.00</b><small>m/s</small></span></div>
+      <div class="stat" title="周期按精确椭圆积分计算，大角度时会略大于小角度近似值"><span class="k">周期 T</span><span class="v"><b id="periodVal">2.23</b><small>s</small></span></div>
+    </div>
+
+    <div class="energy-strip" title="摆球质量取 0.20 kg；条形比例以初始机械能为基准，阻尼会使总能量逐渐减小">
+      <div class="energy-meta">
+        <span><i class="k"></i>动能 <b id="eK">0.000</b> J</span>
+        <span><i class="u"></i>势能 <b id="eU">0.315</b> J</span>
+        <span class="e-total">E总 <b id="eT">0.315</b> J</span>
+      </div>
+      <div class="energy-track" aria-hidden="true"><i id="eKBar"></i><i id="eUBar"></i></div>
+    </div>
+
+    <div class="chart-card">
+      <canvas id="chart" aria-label="振幅 A 随时间 t 变化的图像"></canvas>
+    </div>
+
+    <div class="switches">
+      <button class="switch" id="vectorSwitch" type="button" aria-pressed="false"><span class="track"></span><span>回复力 F</span></button>
+      <button class="switch on" id="ghostSwitch" type="button" aria-pressed="true"><span class="track"></span><span>频闪残影</span></button>
+    </div>
+  </aside>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = (s) => document.querySelector(s);
+  const TAU = Math.PI * 2;
+  const DEG = Math.PI / 180;
+  const RAD = 180 / Math.PI;
+  const MAX_ANGLE = 80 * DEG;
+  const FIXED_DT = 1 / 480;
+  const MASS = 0.2;
+
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const stage = $("#stage");
+  const canvas = $("#canvas");
+  const ctx = canvas.getContext("2d");
+  const chart = $("#chart");
+  const cctx = chart.getContext("2d");
+
+  const state = {
+    L: 1.2,
+    g: 9.8,
+    damping: 0.02,
+    theta0: 30 * DEG,
+    theta: 30 * DEG,
+    omega: 0,
+    t: 0,
+    playing: true,
+    speed: 1,
+    dragging: false,
+    hover: false,
+    hasDragged: false,
+    showVectors: false,
+    showGhosts: true,
+    ghostTimer: 0,
+    ghosts: [],
+    history: [],
+    lastHistory: -1,
+  };
+
+  const geom = {
+    w: 0, h: 0, dpr: 1, pivotX: 0, pivotY: 0,
+    scale: 1, bobR: 18, unit: 1,
+  };
+  let bgCanvas = null;
+  let lastFrame = performance.now();
+  let startAt = performance.now() + 440;
+  let accumulator = 0;
+  let lastHud = 0;
+
+  // ------------------------------------------------------------- physics
+  const periodSmall = () => TAU * Math.sqrt(state.L / state.g);
+
+  function periodExact(angle) {
+    const a = Math.abs(angle);
+    if (a < 1e-6) return periodSmall();
+    const k = Math.sin(a / 2);
+    let A = 1, B = Math.sqrt(Math.max(0, 1 - k * k));
+    for (let i = 0; i < 16; i++) {
+      const na = (A + B) / 2;
+      B = Math.sqrt(A * B);
+      A = na;
+    }
+    return 4 * Math.sqrt(state.L / state.g) * (Math.PI / (2 * A));
+  }
+
+  function integrate(dt) {
+    const alpha = -(state.g / state.L) * Math.sin(state.theta) - state.damping * state.omega;
+    state.omega += alpha * dt;
+    state.theta += state.omega * dt;
+    state.t += dt;
+    if (state.theta > MAX_ANGLE) { state.theta = MAX_ANGLE; state.omega = Math.min(0, state.omega); }
+    if (state.theta < -MAX_ANGLE) { state.theta = -MAX_ANGLE; state.omega = Math.max(0, state.omega); }
+  }
+
+  function energyState() {
+    const K = 0.5 * MASS * Math.pow(state.L * state.omega, 2);
+    const U = MASS * state.g * state.L * (1 - Math.cos(state.theta));
+    const E0 = MASS * state.g * state.L * (1 - Math.cos(state.theta0));
+    return { K, U, E: K + U, E0 };
+  }
+
+  function record() {
+    if (state.t - state.lastHistory < 0.02) return;
+    state.lastHistory = state.t;
+    state.history.push({ t: state.t, th: state.theta });
+    const cut = state.t - 12;
+    while (state.history.length && state.history[0].t < cut) state.history.shift();
+    if (state.showGhosts && state.playing && !state.dragging) {
+      if (state.t >= state.ghostTimer) {
+        state.ghosts.push({ th: state.theta, t: state.t });
+        state.ghostTimer = state.t + 0.085;
+      }
+    }
+    const ghostCut = state.t - 1.15;
+    while (state.ghosts.length && state.ghosts[0].t < ghostCut) state.ghosts.shift();
+  }
+
+  function resetMotion(keepPlaying = true) {
+    state.theta = state.theta0;
+    state.omega = 0;
+    state.t = 0;
+    state.history = [];
+    state.ghosts = [];
+    state.lastHistory = -1;
+    state.ghostTimer = 0;
+    accumulator = 0;
+    if (!keepPlaying) state.playing = false;
+    updateTransport();
+    updateParamsUI();
+    updateHud(true);
+    drawChart();
+  }
+
+  // ------------------------------------------------------------- geometry
+  function resizeStage() {
+    const r = canvas.getBoundingClientRect();
+    const w = Math.max(1, r.width);
+    const h = Math.max(1, r.height);
+    geom.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    geom.w = w;
+    geom.h = h;
+    canvas.width = Math.round(w * geom.dpr);
+    canvas.height = Math.round(h * geom.dpr);
+    ctx.setTransform(geom.dpr, 0, 0, geom.dpr, 0, 0);
+    geom.pivotX = w * 0.5;
+    geom.pivotY = Math.max(82, h * 0.195);
+    geom.scale = Math.min((w * 0.50) / 1.5, (h * 0.76) / 1.5);
+    geom.bobR = clamp(geom.scale * 0.073, 12, 25);
+    geom.unit = clamp(Math.min(w, h) / 740, 0.82, 1.16);
+    buildBackground();
+    drawChart();
+  }
+
+  function buildBackground() {
+    const w = geom.w, h = geom.h, dpr = geom.dpr;
+    const bg = document.createElement("canvas");
+    bg.width = Math.round(w * dpr);
+    bg.height = Math.round(h * dpr);
+    const b = bg.getContext("2d");
+    b.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const grad = b.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, "#fcf9f2");
+    grad.addColorStop(0.58, "#faf6ed");
+    grad.addColorStop(1, "#f4eee2");
+    b.fillStyle = grad;
+    b.fillRect(0, 0, w, h);
+
+    const glow = b.createRadialGradient(w * 0.5, h * 0.28, 10, w * 0.5, h * 0.28, Math.max(w, h) * 0.62);
+    glow.addColorStop(0, "rgba(201,68,47,.045)");
+    glow.addColorStop(0.55, "rgba(201,68,47,.012)");
+    glow.addColorStop(1, "rgba(201,68,47,0)");
+    b.fillStyle = glow;
+    b.fillRect(0, 0, w, h);
+
+    const step = w < 620 ? 23 : 29;
+    b.fillStyle = "rgba(53,43,29,.10)";
+    for (let y = step * 0.7; y < h; y += step) {
+      for (let x = step * 0.6; x < w; x += step) {
+        b.beginPath();
+        b.arc(x, y, 0.85, 0, TAU);
+        b.fill();
+      }
+    }
+
+    const vig = b.createRadialGradient(w * 0.5, h * 0.48, Math.min(w, h) * 0.34, w * 0.5, h * 0.48, Math.max(w, h) * 0.78);
+    vig.addColorStop(0, "rgba(70,52,30,0)");
+    vig.addColorStop(1, "rgba(70,52,30,.055)");
+    b.fillStyle = vig;
+    b.fillRect(0, 0, w, h);
+
+    bgCanvas = bg;
+  }
+
+  const bobPoint = (angle = state.theta, len = state.L * geom.scale) => ({
+    x: geom.pivotX + Math.sin(angle) * len,
+    y: geom.pivotY + Math.cos(angle) * len,
+  });
+
+  function angleFromPoint(x, y) {
+    const dx = x - geom.pivotX;
+    const dy = Math.max(1, y - geom.pivotY);
+    return clamp(Math.atan2(dx, dy), -MAX_ANGLE, MAX_ANGLE);
+  }
+
+  // ------------------------------------------------------------- drawing
+  function haloText(text, x, y, fill, font, align = "center", baseline = "middle") {
+    ctx.save();
+    ctx.font = font;
+    ctx.textAlign = align;
+    ctx.textBaseline = baseline;
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "rgba(250,247,239,.94)";
+    ctx.lineWidth = 5;
+    ctx.strokeText(text, x, y);
+    ctx.fillStyle = fill;
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  function arrow(x1, y1, x2, y2, color, width, label) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.hypot(dx, dy);
+    if (len < 4) return;
+    const ux = dx / len, uy = dy / len;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2 - ux * 5, y2 - uy * 5);
+    ctx.stroke();
+    const head = 9;
+    const wing = 0.42;
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - Math.cos(wing) * head * ux + Math.sin(wing) * head * uy,
+               y2 - Math.cos(wing) * head * uy - Math.sin(wing) * head * ux);
+    ctx.lineTo(x2 - Math.cos(wing) * head * ux - Math.sin(wing) * head * uy,
+               y2 - Math.cos(wing) * head * uy + Math.sin(wing) * head * ux);
+    ctx.closePath();
+    ctx.fill();
+    if (label) {
+      haloText(label, x2 + ux * 13, y2 + uy * 13 - 4, color,
+        `italic 600 ${12.5 * geom.unit}px "Cambria Math","Noto Serif SC",Georgia,serif`);
+    }
+    ctx.restore();
+  }
+
+  function draw(now) {
+    const g = geom;
+    if (!bgCanvas) return;
+    ctx.clearRect(0, 0, g.w, g.h);
+    ctx.drawImage(bgCanvas, 0, 0, g.w, g.h);
+
+    const px = g.pivotX, py = g.pivotY;
+    const len = state.L * g.scale;
+    const bob = bobPoint();
+    const bobR = g.bobR;
+
+    // equilibrium reference
+    ctx.save();
+    ctx.strokeStyle = "rgba(36,35,31,.29)";
+    ctx.lineWidth = 1.3;
+    ctx.setLineDash([6, 7]);
+    ctx.beginPath();
+    ctx.moveTo(px, py - 48);
+    ctx.lineTo(px, g.h * 0.935);
+    ctx.stroke();
+    ctx.restore();
+
+    // swing range
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(px, py, len, Math.PI / 2 - state.theta0, Math.PI / 2 + state.theta0, false);
+    ctx.strokeStyle = "rgba(201,68,47,.19)";
+    ctx.lineWidth = 1.1;
+    ctx.setLineDash([2, 7]);
+    ctx.lineCap = "round";
+    ctx.stroke();
+    ctx.restore();
+
+    // range end ticks
+    for (const a of [-state.theta0, state.theta0]) {
+      const ex = px + Math.sin(a) * len;
+      const ey = py + Math.cos(a) * len;
+      const nx = Math.sin(a), ny = Math.cos(a);
+      ctx.beginPath();
+      ctx.moveTo(ex - nx * 5, ey - ny * 5);
+      ctx.lineTo(ex + nx * 5, ey + ny * 5);
+      ctx.strokeStyle = "rgba(201,68,47,.26)";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+
+    // ceiling
+    const half = Math.min(g.w * 0.39, 400);
+    const x0 = px - half, x1 = px + half;
+    ctx.save();
+    ctx.strokeStyle = "rgba(36,35,31,.76)";
+    ctx.lineWidth = 2.6;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x0, py);
+    ctx.lineTo(x1, py);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(36,35,31,.55)";
+    ctx.lineWidth = 1.35;
+    for (let x = x0 + 9; x < x1 - 4; x += 23) {
+      ctx.beginPath();
+      ctx.moveTo(x - 8, py - 2.5);
+      ctx.lineTo(x + 4, py - 15);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // pivot
+    ctx.beginPath();
+    ctx.arc(px, py, 7.5, 0, TAU);
+    ctx.fillStyle = "rgba(250,247,239,.9)";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(px, py, 4, 0, TAU);
+    ctx.fillStyle = "#24231f";
+    ctx.fill();
+    haloText("O", px - 15, py + 19, "rgba(36,35,31,.44)",
+      `italic 500 ${11.5 * g.unit}px "Cambria Math","Noto Serif SC",Georgia,serif`, "center", "middle");
+
+    // ghosts
+    if (state.showGhosts) {
+      for (const gh of state.ghosts) {
+        const age = state.t - gh.t;
+        if (age < 0 || age > 1.15) continue;
+        const p = bobPoint(gh.th);
+        const a = 0.29 * (1 - age / 1.15);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, bobR * 0.55, 0, TAU);
+        ctx.strokeStyle = `rgba(201,68,47,${a})`;
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 1.2, 0, TAU);
+        ctx.fillStyle = `rgba(201,68,47,${a * 0.95})`;
+        ctx.fill();
+      }
+    }
+
+    // angle arc
+    const arcR = clamp(len * 0.34, 36, 102);
+    if (Math.abs(state.theta) > 0.012) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(px, py, arcR, Math.PI / 2, Math.PI / 2 - state.theta, state.theta > 0);
+      ctx.strokeStyle = "rgba(201,68,47,.74)";
+      ctx.lineWidth = 1.45;
+      ctx.lineCap = "round";
+      ctx.stroke();
+      ctx.restore();
+
+      const mid = Math.PI / 2 - state.theta / 2;
+      let tx = px + Math.cos(mid) * (arcR + 23);
+      let ty = py + Math.sin(mid) * (arcR + 25);
+      if (Math.abs(state.theta) < 0.075) {
+        tx = px + 20;
+        ty = py + arcR + 19;
+      }
+      haloText("θ", tx, ty, "#c9442f",
+        `italic 500 ${23 * g.unit}px "Cambria Math","Noto Serif SC",Georgia,serif`);
+    } else {
+      haloText("θ", px + 20, py + arcR + 18, "rgba(201,68,47,.8)",
+        `italic 500 ${23 * g.unit}px "Cambria Math","Noto Serif SC",Georgia,serif`);
+    }
+
+    // length label
+    const mx = px + Math.sin(state.theta) * len * 0.63;
+    const my = py + Math.cos(state.theta) * len * 0.63;
+    const lx = mx - Math.cos(state.theta) * 19;
+    const ly = my + Math.sin(state.theta) * 19;
+    haloText("L", lx, ly, "#a72f1e",
+      `italic 500 ${18 * g.unit}px "Cambria Math","Noto Serif SC",Georgia,serif`);
+
+    // rod (deep-gold rope)
+    ctx.save();
+    const rodGrad = ctx.createLinearGradient(px, py, bob.x, bob.y);
+    rodGrad.addColorStop(0, "#c99a2e");
+    rodGrad.addColorStop(0.55, "#b78310");
+    rodGrad.addColorStop(1, "#93670a");
+    ctx.strokeStyle = rodGrad;
+    ctx.lineWidth = 2.8;
+    ctx.lineCap = "round";
+    ctx.shadowColor = "rgba(74,52,9,.28)";
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 3;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(bob.x, bob.y);
+    ctx.stroke();
+    ctx.restore();
+
+    // bob
+    ctx.save();
+    ctx.shadowColor = "rgba(74,31,20,.27)";
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetY = 4;
+    const bobGrad = ctx.createRadialGradient(bob.x - bobR * 0.34, bob.y - bobR * 0.42, bobR * 0.1, bob.x, bob.y, bobR);
+    bobGrad.addColorStop(0, "#ec7b62");
+    bobGrad.addColorStop(0.52, "#d24e36");
+    bobGrad.addColorStop(1, "#a82e1c");
+    ctx.beginPath();
+    ctx.arc(bob.x, bob.y, bobR, 0, TAU);
+    ctx.fillStyle = bobGrad;
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.strokeStyle = "#2b1d18";
+    ctx.lineWidth = 1.9;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.beginPath();
+    ctx.arc(bob.x - bobR * 0.28, bob.y - bobR * 0.32, bobR * 0.2, 0, TAU);
+    ctx.fillStyle = "rgba(255,245,232,.48)";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(bob.x, bob.y, bobR * 0.52, 0, TAU);
+    ctx.strokeStyle = "rgba(255,235,220,.16)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // drag affordance
+    if (!state.hasDragged || state.hover || state.dragging) {
+      const pulse = 0.5 + 0.5 * Math.sin(now * 3.1);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(bob.x, bob.y, bobR + 7 + pulse * 2.2, 0, TAU);
+      ctx.setLineDash([2.5, 5]);
+      ctx.strokeStyle = `rgba(201,68,47,${0.22 + pulse * 0.16})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // vectors
+    if (state.showVectors) {
+      const tx = Math.cos(state.theta);
+      const ty = -Math.sin(state.theta);
+      const f = -MASS * state.g * Math.sin(state.theta);
+      if (Math.abs(f) > 0.025) {
+        const dir = Math.sign(f);
+        const start = bobR + 4;
+        const fLen = clamp(Math.abs(f) * 68, 26, 118);
+        const sx = bob.x + tx * dir * start;
+        const sy = bob.y + ty * dir * start;
+        arrow(sx, sy, sx + tx * dir * fLen, sy + ty * dir * fLen,
+              "#a6621d", 2.1, "F");
+      }
+    }
+  }
+
+  // ------------------------------------------------------------- chart
+  function resizeChart() {
+    const r = chart.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    chart.width = Math.max(1, Math.round(r.width * dpr));
+    chart.height = Math.max(1, Math.round(r.height * dpr));
+    cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function drawChart() {
+    const r = chart.getBoundingClientRect();
+    const w = r.width, h = r.height;
+    if (w < 2 || h < 2) return;
+    const padL = 24, padR = 12, padT = 18, padB = 15;
+    const plotW = Math.max(1, w - padL - padR);
+    const plotH = Math.max(1, h - padT - padB);
+    const mid = padT + plotH / 2;
+    const ampDeg = Math.max(8, state.theta0 * RAD * 1.08);
+    const yHalf = plotH / 2 - 1;
+    const tEnd = Math.max(4, state.t);
+    const tStart = tEnd - 4;
+
+    cctx.clearRect(0, 0, w, h);
+
+    // simple axes: amplitude A (vertical) and time t (horizontal)
+    const axisColor = "rgba(36,35,31,.23)";
+    cctx.save();
+    cctx.strokeStyle = axisColor;
+    cctx.fillStyle = axisColor;
+    cctx.lineWidth = 1;
+    cctx.lineCap = "round";
+    cctx.beginPath();
+    cctx.moveTo(padL, mid);
+    cctx.lineTo(padL, padT - 2);
+    cctx.stroke();
+    cctx.beginPath();
+    cctx.moveTo(padL, mid);
+    cctx.lineTo(w - padR, mid);
+    cctx.stroke();
+    cctx.beginPath();
+    cctx.moveTo(padL, padT - 6);
+    cctx.lineTo(padL - 3, padT);
+    cctx.lineTo(padL + 3, padT);
+    cctx.closePath();
+    cctx.fill();
+    cctx.beginPath();
+    cctx.moveTo(w - padR + 4, mid);
+    cctx.lineTo(w - padR - 2, mid - 3);
+    cctx.lineTo(w - padR - 2, mid + 3);
+    cctx.closePath();
+    cctx.fill();
+
+    cctx.font = `italic 500 11px "Cambria Math","Noto Serif SC",Georgia,serif`;
+    cctx.fillStyle = "rgba(89,85,75,.72)";
+    cctx.textAlign = "center";
+    cctx.textBaseline = "middle";
+    cctx.fillText("A", padL, 7);
+    cctx.textAlign = "right";
+    cctx.fillText("t", w - padR + 1, h - 4);
+    cctx.restore();
+
+    const toX = (t) => padL + ((t - tStart) / 4) * plotW;
+    const toY = (th) => mid - (th * RAD / ampDeg) * yHalf;
+
+    // curve
+    if (state.history.length > 1) {
+      cctx.save();
+      cctx.beginPath();
+      let started = false;
+      for (const p of state.history) {
+        if (p.t < tStart - 0.2) continue;
+        const x = toX(p.t), y = toY(p.th);
+        if (!started) { cctx.moveTo(x, y); started = true; }
+        else cctx.lineTo(x, y);
+      }
+      cctx.strokeStyle = "#c9442f";
+      cctx.lineWidth = 1.55;
+      cctx.lineJoin = "round";
+      cctx.lineCap = "round";
+      cctx.stroke();
+      cctx.restore();
+    }
+
+    // current point
+    const cx = toX(state.t);
+    const cy = toY(state.theta);
+    cctx.save();
+    cctx.beginPath();
+    cctx.arc(cx, cy, 2.7, 0, TAU);
+    cctx.fillStyle = "#c9442f";
+    cctx.fill();
+    cctx.beginPath();
+    cctx.arc(cx, cy, 5.2, 0, TAU);
+    cctx.strokeStyle = "rgba(201,68,47,.22)";
+    cctx.lineWidth = 1;
+    cctx.stroke();
+    cctx.restore();
+  }
+
+  // ------------------------------------------------------------- HUD
+  function signed(v, digits) {
+    if (Math.abs(v) < 0.0005) return (0).toFixed(digits);
+    return (v > 0 ? "+" : "−") + Math.abs(v).toFixed(digits);
+  }
+
+  function updateParamsUI() {
+    $("#lVal").textContent = state.L.toFixed(2);
+    $("#aVal").textContent = Math.round(state.theta0 * RAD);
+    $("#gVal").textContent = state.g.toFixed(1);
+    $("#bVal").textContent = state.damping.toFixed(3);
+    $("#periodVal").textContent = periodExact(state.theta0).toFixed(2);
+    setFill($("#lRange"), (state.L - 0.5) / 1.0);
+    setFill($("#aRange"), (state.theta0 * RAD - 1) / 79);
+    setFill($("#gRange"), (state.g - 1.6) / 18.4);
+    setFill($("#bRange"), state.damping / 0.30);
+  }
+
+  function updateHud(force = false) {
+    const now = performance.now();
+    if (!force && now - lastHud < 55) return;
+    lastHud = now;
+    $("#thetaVal").textContent = signed(state.theta * RAD, 1);
+    $("#omegaVal").textContent = signed(state.omega, 2);
+    $("#vVal").textContent = Math.abs(state.omega * state.L).toFixed(2);
+    $("#periodVal").textContent = periodExact(state.theta0).toFixed(2);
+    const en = energyState();
+    const denom = Math.max(en.E0, en.E, 1e-6);
+    const kPct = clamp((en.K / denom) * 100, 0, 100);
+    const uPct = clamp((en.U / denom) * 100, 0, 100 - kPct);
+    $("#eK").textContent = en.K.toFixed(3);
+    $("#eU").textContent = en.U.toFixed(3);
+    $("#eT").textContent = en.E.toFixed(3);
+    $("#eKBar").style.width = `${kPct.toFixed(2)}%`;
+    $("#eUBar").style.width = `${uPct.toFixed(2)}%`;
+    updateStatus();
+  }
+
+  function updateStatus() {
+    const text = $("#statusText");
+    const box = $("#status");
+    if (state.dragging) {
+      text.textContent = "手动定位";
+      box.classList.remove("paused");
+    } else if (state.playing) {
+      text.textContent = "振动中";
+      box.classList.remove("paused");
+    } else {
+      text.textContent = "已暂停";
+      box.classList.add("paused");
+    }
+  }
+
+  function setFill(el, frac) {
+    el.style.setProperty("--fill", `${clamp(frac, 0, 1) * 100}%`);
+  }
+
+  const playIcon = $("#playIcon");
+  const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="5" width="3.6" height="14" rx="1"/><rect x="13.9" y="5" width="3.6" height="14" rx="1"/></svg>';
+  const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.4v13.2c0 .8.9 1.3 1.6.9l10-6.6c.6-.4.6-1.4 0-1.8l-10-6.6c-.7-.4-1.6.1-1.6.9z"/></svg>';
+
+  function updateTransport() {
+    playIcon.innerHTML = state.playing ? ICON_PAUSE : ICON_PLAY;
+    $("#playText").textContent = state.playing ? "暂停" : "播放";
+    updateStatus();
+  }
+
+  function togglePlay() {
+    state.playing = !state.playing;
+    accumulator = 0;
+    updateTransport();
+  }
+
+  // ------------------------------------------------------------- interaction
+  function localPoint(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  function bobHit(p) {
+    const b = bobPoint();
+    return Math.hypot(p.x - b.x, p.y - b.y) <= geom.bobR + 20;
+  }
+
+  canvas.addEventListener("pointerdown", (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    const p = localPoint(e);
+    if (!bobHit(p)) return;
+    e.preventDefault();
+    canvas.setPointerCapture(e.pointerId);
+    state.dragging = true;
+    state.hover = true;
+    state.omega = 0;
+    state.ghosts = [];
+    state.theta = angleFromPoint(p.x, p.y);
+    canvas.style.cursor = "grabbing";
+    updateStatus();
+    updateHud(true);
+    drawChart();
+  });
+
+  canvas.addEventListener("pointermove", (e) => {
+    const p = localPoint(e);
+    if (state.dragging) {
+      state.theta = angleFromPoint(p.x, p.y);
+      state.omega = 0;
+      updateHud();
+      drawChart();
+      return;
+    }
+    const hit = bobHit(p);
+    if (hit !== state.hover) {
+      state.hover = hit;
+      canvas.style.cursor = hit ? "grab" : "default";
+    }
+  });
+
+  function endDrag(e) {
+    if (!state.dragging) return;
+    state.dragging = false;
+    state.hasDragged = true;
+    $("#hint").classList.add("used");
+    state.theta0 = clamp(Math.abs(state.theta), 1 * DEG, MAX_ANGLE);
+    state.theta = state.theta0 * Math.sign(state.theta || 1);
+    state.omega = 0;
+    state.t = 0;
+    state.history = [];
+    state.ghosts = [];
+    state.lastHistory = -1;
+    state.ghostTimer = 0;
+    accumulator = 0;
+    $("#aRange").value = Math.round(state.theta0 * RAD);
+    updateParamsUI();
+    updateHud(true);
+    drawChart();
+    canvas.style.cursor = state.hover ? "grab" : "default";
+    if (e && e.pointerId !== undefined) {
+      try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+  }
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+  canvas.addEventListener("pointerleave", () => {
+    if (!state.dragging) {
+      state.hover = false;
+      canvas.style.cursor = "default";
+    }
+  });
+
+  // controls
+  $("#lRange").addEventListener("input", (e) => {
+    state.L = Number(e.target.value);
+    state.ghosts = [];
+    state.ghostTimer = state.t;
+    updateParamsUI();
+    updateHud(true);
+  });
+  $("#aRange").addEventListener("input", (e) => {
+    state.theta0 = Number(e.target.value) * DEG;
+    resetMotion(state.playing);
+    updateStatus();
+  });
+  $("#gRange").addEventListener("input", (e) => {
+    state.g = Number(e.target.value);
+    state.ghosts = [];
+    state.ghostTimer = state.t;
+    updateParamsUI();
+    updateHud(true);
+  });
+  $("#bRange").addEventListener("input", (e) => {
+    state.damping = Number(e.target.value);
+    updateParamsUI();
+  });
+
+  $("#playBtn").addEventListener("click", togglePlay);
+  $("#resetBtn").addEventListener("click", () => resetMotion(state.playing));
+
+  $("#speedSeg").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-speed]");
+    if (!b) return;
+    state.speed = Number(b.dataset.speed);
+    for (const x of $("#speedSeg").querySelectorAll("button")) x.classList.toggle("on", x === b);
+  });
+
+  $("#vectorSwitch").addEventListener("click", () => {
+    state.showVectors = !state.showVectors;
+    $("#vectorSwitch").classList.toggle("on", state.showVectors);
+    $("#vectorSwitch").setAttribute("aria-pressed", String(state.showVectors));
+    $("#legend").classList.toggle("show", state.showVectors);
+  });
+
+  $("#ghostSwitch").addEventListener("click", () => {
+    state.showGhosts = !state.showGhosts;
+    $("#ghostSwitch").classList.toggle("on", state.showGhosts);
+    $("#ghostSwitch").setAttribute("aria-pressed", String(state.showGhosts));
+    if (!state.showGhosts) state.ghosts = [];
+    else state.ghostTimer = state.t;
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.target.closest("input,button")) return;
+    if (e.code === "Space") {
+      e.preventDefault();
+      togglePlay();
+    } else if (e.key === "r" || e.key === "R") {
+      e.preventDefault();
+      resetMotion(state.playing);
+    }
+  });
+
+  // ------------------------------------------------------------- loop
+  function frame(now) {
+    let dt = (now - lastFrame) / 1000;
+    lastFrame = now;
+    if (!Number.isFinite(dt) || dt < 0) dt = 0;
+    dt = Math.min(dt, 0.06);
+
+    if (state.playing && !state.dragging && now >= startAt) {
+      accumulator += dt * state.speed;
+      let guard = 0;
+      while (accumulator >= FIXED_DT && guard < 800) {
+        integrate(FIXED_DT);
+        accumulator -= FIXED_DT;
+        guard++;
+      }
+      record();
+    } else {
+      accumulator = 0;
+    }
+
+    draw(now / 1000);
+    drawChart();
+    updateHud();
+    requestAnimationFrame(frame);
+  }
+
+  // expose a small debug/test surface
+  window.__pendulum = {
+    get state() {
+      return {
+        L: state.L, g: state.g, damping: state.damping,
+        theta: state.theta, theta0: state.theta0, omega: state.omega,
+        t: state.t, playing: state.playing, speed: state.speed,
+        dragging: state.dragging, history: state.history.length,
+      };
+    },
+    bobScreen() {
+      const r = canvas.getBoundingClientRect();
+      const b = bobPoint();
+      return { x: r.left + b.x, y: r.top + b.y, r: geom.bobR };
+    },
+    pivotScreen() {
+      const r = canvas.getBoundingClientRect();
+      return { x: r.left + geom.pivotX, y: r.top + geom.pivotY };
+    },
+    reset() { resetMotion(state.playing); },
+    togglePlay,
+  };
+
+  // ------------------------------------------------------------- boot
+  const ro = new ResizeObserver(() => {
+    resizeStage();
+    resizeChart();
+    drawChart();
+  });
+  ro.observe(stage);
+  ro.observe(chart);
+
+  window.addEventListener("resize", () => {
+    resizeChart();
+    drawChart();
+  });
+
+  updateTransport();
+  updateParamsUI();
+  updateHud(true);
+  resizeStage();
+  resizeChart();
+  drawChart();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

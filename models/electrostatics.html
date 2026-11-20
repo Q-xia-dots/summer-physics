@@ -1,0 +1,1066 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>静电场 · summer物理</title>
+<meta name="description" content="静电场交互模型：点电荷、等量异种、等量同种与电极板；观察电场线、等势线，移动鼠标测场强，拖动试探电荷看库仑力。">
+<meta name="theme-color" content="#f3eee4">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --paper:#f3eee4;
+    --paper-hi:#fbf8f1;
+    --ink:#24231f;
+    --ink-soft:#59554b;
+    --muted:#8b8375;
+    --red:#c9442f;
+    --red-deep:#a72f1e;
+    --gold:#b78310;
+    --gold-deep:#93670a;
+    --teal:#2f7580;
+    --teal-deep:#1f5f68;
+    --line:rgba(36,35,31,.13);
+    --line-soft:rgba(36,35,31,.075);
+    --serif:"Noto Serif SC","Songti SC","STSong",Georgia,serif;
+    --sans:"Noto Sans SC","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+    --mono:"Cascadia Mono","SFMono-Regular",Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;overflow:hidden;color:var(--ink);font-family:var(--sans);
+    background:
+      radial-gradient(1100px 680px at 8% -8%,rgba(255,255,255,.72),transparent 64%),
+      radial-gradient(1000px 760px at 98% 104%,rgba(188,158,108,.18),transparent 62%),
+      var(--paper);
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(rgba(58,48,34,.13) .55px,transparent .7px);
+    background-size:3px 3px;opacity:.22;mix-blend-mode:multiply;
+  }
+  button,input{font:inherit;color:inherit}
+  button{cursor:pointer}
+  #app{
+    position:relative;z-index:1;height:100dvh;max-width:1780px;margin:0 auto;
+    display:grid;grid-template-columns:minmax(0,1fr) 386px;
+    grid-template-rows:auto minmax(0,1fr) 194px;
+    gap:14px 22px;padding:24px 30px 24px 38px;
+  }
+
+  /* ---------------------------------------------------------- header */
+  header{grid-column:1/-1;grid-row:1;display:flex;align-items:flex-end;justify-content:space-between;gap:26px;min-width:0;padding:1px 2px 0}
+  .kicker{display:flex;align-items:center;gap:10px;color:var(--red);font-size:9.5px;font-weight:700;letter-spacing:.26em;text-transform:uppercase}
+  .kicker::before{content:"";width:28px;height:1px;background:var(--red)}
+  .kicker a{color:var(--red);text-decoration:none;text-transform:none;letter-spacing:.08em;border-bottom:1px solid transparent;transition:border-color .18s,color .18s}
+  .kicker a:hover{color:var(--red-deep);border-color:rgba(201,68,47,.45)}
+  .kicker .kicker-slash{color:var(--muted);opacity:.55;font-weight:400;letter-spacing:0;margin:0 1px}
+  .title-line{display:flex;align-items:baseline;gap:16px;margin:6px 0 4px}
+  h1{margin:0;font-family:var(--serif);font-size:clamp(38px,4.3vw,56px);line-height:1.06;font-weight:700;letter-spacing:.04em}
+  .title-line .en{font-size:9px;letter-spacing:.2em;color:var(--muted);font-weight:600;white-space:nowrap}
+  header p{margin:0;font-size:12.5px;line-height:1.65;color:var(--ink-soft);letter-spacing:.012em}
+  .formula-stamp{display:flex;flex-direction:column;align-items:flex-end;gap:3px;padding-left:22px;border-left:1px solid var(--line);white-space:nowrap;margin-bottom:3px}
+  .formula-stamp span{font-size:8.5px;letter-spacing:.17em;color:var(--muted);font-weight:600}
+  .formula-stamp b{font-family:var(--serif);font-style:italic;font-size:18px;font-weight:500;letter-spacing:.01em}
+
+  /* ---------------------------------------------------------- stage */
+  .stage{
+    grid-column:1;grid-row:2;position:relative;min-width:0;min-height:0;overflow:hidden;
+    border:1px solid rgba(36,35,31,.15);border-radius:25px;background:var(--paper-hi);
+    box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 26px 60px -48px rgba(56,40,22,.7);
+  }
+  .stage::after{content:"";position:absolute;inset:8px;border-radius:18px;border:1px solid rgba(36,35,31,.045);pointer-events:none}
+  #canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+  .stage-top{position:absolute;left:19px;right:19px;top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:none}
+  .stage-tag{display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:.16em;color:var(--muted);font-weight:600}
+  .stage-tag span{display:inline-grid;place-items:center;width:21px;height:21px;border:1px solid var(--line);border-radius:50%;font-family:var(--mono);font-size:8.5px;letter-spacing:0;color:var(--ink-soft)}
+  .status{display:flex;align-items:center;gap:7px;padding:5px 10px 5px 9px;border:1px solid rgba(36,35,31,.12);border-radius:999px;background:rgba(250,247,239,.72);backdrop-filter:blur(8px);font-size:10px;color:var(--ink-soft);letter-spacing:.04em}
+  .status i{width:5px;height:5px;border-radius:50%;background:var(--red);box-shadow:0 0 0 0 rgba(201,68,47,.45);animation:pulse 1.9s ease-out infinite}
+  .status b{font-weight:500}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(201,68,47,.4)}70%{box-shadow:0 0 0 6px rgba(201,68,47,0)}100%{box-shadow:0 0 0 0 rgba(201,68,47,0)}}
+  .stage-bottom{position:absolute;left:19px;right:19px;bottom:14px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;pointer-events:none}
+  .legend{display:flex;align-items:center;gap:14px;padding:6px 10px;border:1px solid rgba(36,35,31,.09);border-radius:9px;background:rgba(250,247,239,.72);backdrop-filter:blur(6px);font-size:9px;color:var(--ink-soft)}
+  .legend span{display:flex;align-items:center;gap:5px;white-space:nowrap}
+  .legend i{display:block;width:14px;height:2px;border-radius:2px;position:relative}
+  .legend .field{background:var(--red);color:var(--red)}
+  .legend .equi{background:none;border-top:1px dashed var(--teal);height:0;color:var(--teal)}
+  .legend .test{width:8px;height:8px;border-radius:50%;background:rgba(183,131,16,.2);border:1.5px solid var(--gold);color:var(--gold)}
+  .hint{display:flex;align-items:center;gap:7px;margin-left:auto;padding:6px 11px;border:1px solid rgba(36,35,31,.1);border-radius:999px;background:rgba(250,247,239,.76);backdrop-filter:blur(6px);font-size:9.5px;color:var(--ink-soft);letter-spacing:.03em}
+  .hint::before{content:"";width:6px;height:6px;border-radius:50%;border:1px solid var(--red);box-shadow:inset 0 0 0 1.5px rgba(201,68,47,.25)}
+
+  .probe-tip{
+    position:absolute;z-index:5;min-width:120px;padding:8px 10px;border:1px solid rgba(36,35,31,.16);border-radius:9px;
+    background:rgba(255,253,248,.94);backdrop-filter:blur(10px);box-shadow:0 12px 30px -20px rgba(40,28,14,.6);
+    pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .12s,transform .12s;
+  }
+  .probe-tip.on{opacity:1;transform:translateY(0)}
+  .probe-tip b{display:block;font-family:var(--serif);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .probe-tip b span{font-family:var(--sans);font-size:8px;font-weight:400;color:var(--muted);margin-left:3px}
+  .probe-tip small{display:block;margin-top:2px;font-size:8.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  /* ---------------------------------------------------------- panel */
+  .panel{
+    grid-column:2;grid-row:2;align-self:stretch;min-height:0;overflow:auto;
+    padding:18px 18px 15px;border:1px solid rgba(36,35,31,.14);border-radius:25px;
+    background:linear-gradient(168deg,rgba(255,253,248,.79),rgba(255,251,241,.56));
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    box-shadow:0 1px 0 rgba(255,255,255,.86) inset,0 32px 80px -58px rgba(56,40,22,.62);
+    scrollbar-width:none;
+  }
+  .panel::-webkit-scrollbar{display:none}
+  .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .eyebrow{font-size:8.5px;font-weight:700;letter-spacing:.23em;color:var(--red)}
+  .panel h2{font-family:var(--serif);font-size:23px;line-height:1.2;font-weight:700;margin:3px 0 0;letter-spacing:.03em}
+  .panel-note{font-size:8.5px;letter-spacing:.12em;color:var(--muted);padding-top:4px;white-space:nowrap}
+  .panel-note::before{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--red);margin-right:6px;vertical-align:1px}
+
+  .mode-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;border:1px solid rgba(36,35,31,.1);border-radius:10px;background:rgba(255,255,255,.16)}
+  .mode-tabs button{border:0;background:none;padding:7px 4px;border-radius:7px;font-size:9.5px;letter-spacing:.03em;color:var(--muted);line-height:1.2;transition:background .15s,color .15s}
+  .mode-tabs button:hover{color:var(--ink-soft)}
+  .mode-tabs button.on{background:rgba(47,117,128,.12);color:var(--teal-deep);font-weight:600}
+
+  .control{display:block;margin:9px 0 0}
+  .control[hidden]{display:none}
+  .control-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:1px}
+  .control-head .name{font-size:11px;color:var(--ink-soft);letter-spacing:.02em}
+  .control-head em{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--ink);margin-left:3px}
+  .control-head .value{font-family:var(--mono);font-size:10.5px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .control-head .value b{font-weight:600}
+  .control-head .value small{font-family:var(--sans);font-size:8.5px;color:var(--muted);margin-left:2px}
+
+  input[type=range]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:19px;margin:1px 0 0;background:transparent;outline:none;--fill:50%}
+  input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:3px;background:linear-gradient(to right,var(--red) 0 var(--fill),rgba(36,35,31,.14) var(--fill) 100%)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;margin-top:-6px;border-radius:50%;background:var(--paper-hi);border:2px solid var(--red);box-shadow:0 2px 5px rgba(60,40,25,.2);transition:transform .12s}
+  input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
+  input[type=range]::-moz-range-track{height:3px;border-radius:3px;background:rgba(36,35,31,.14)}
+  input[type=range]::-moz-range-progress{height:3px;border-radius:3px;background:var(--red)}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:2px solid var(--red);border-radius:50%;background:var(--paper-hi)}
+
+  .sign-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px}
+  .sign-row[hidden]{display:none}
+  .sign-row>span{font-size:10.5px;color:var(--ink-soft)}
+  .seg{display:flex;gap:2px;padding:2px;border:1px solid rgba(36,35,31,.1);border-radius:8px;background:rgba(255,255,255,.16)}
+  .seg button{border:0;background:none;padding:3px 9px;border-radius:6px;font-size:9.5px;color:var(--muted);font-family:var(--serif)}
+  .seg button:hover{color:var(--ink-soft)}
+  .seg button.on{background:rgba(201,68,47,.1);color:var(--red);font-weight:600}
+  .seg button[data-sign="-1"].on{background:rgba(47,117,128,.12);color:var(--teal-deep)}
+
+  .probe-card{margin-top:11px;padding:9px 10px 8px;border:1px solid rgba(47,117,128,.18);border-radius:11px;background:rgba(47,117,128,.045)}
+  .probe-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:8px;font-weight:700;letter-spacing:.12em;color:var(--teal-deep);margin-bottom:3px}
+  .probe-head span:last-child{font-family:var(--mono);font-size:7.5px;font-weight:400;letter-spacing:0;color:var(--muted);max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .probe-e{display:flex;align-items:baseline;gap:4px}
+  .probe-e b{font-family:var(--serif);font-size:24px;line-height:1.1;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .probe-e small{font-size:8.5px;color:var(--muted)}
+  .probe-v{margin-top:2px;font-size:9px;color:var(--muted)}
+  .probe-v b{font-family:var(--mono);font-size:9.5px;font-weight:500;color:var(--ink-soft)}
+
+  .force-card{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;padding:7px 9px;border:1px solid rgba(183,131,16,.2);border-radius:10px;background:rgba(183,131,16,.045)}
+  .force-card span{font-size:9px;color:var(--ink-soft)}
+  .force-card .fv{display:flex;align-items:baseline;gap:2px}
+  .force-card b{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink)}
+  .force-card small{font-size:8px;color:var(--muted)}
+
+  .reset-btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:34px;margin-top:10px;border:1px solid rgba(36,35,31,.15);border-radius:9px;background:rgba(255,255,255,.25);font-size:10px;color:var(--ink-soft);transition:background .15s}
+  .reset-btn:hover{background:rgba(255,255,255,.55)}
+  .reset-btn svg{width:12px;height:12px}
+  .panel-foot{margin-top:9px;padding-top:8px;border-top:1px solid var(--line-soft);font-size:8px;line-height:1.6;color:var(--muted)}
+
+  /* ---------------------------------------------------------- derivation */
+  .derivation{grid-column:1/-1;grid-row:3;display:grid;grid-template-columns:1fr 1.1fr .9fr;gap:14px;min-height:0}
+  .derivation-card{min-width:0;min-height:0;overflow:hidden;padding:10px 11px 8px;border:1px solid rgba(36,35,31,.1);border-radius:13px;background:rgba(255,255,255,.2)}
+  .card-head{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+  .card-head .num{font-family:var(--mono);font-size:8px;color:var(--red);letter-spacing:.06em}
+  .card-head h3{margin:0;font-family:var(--serif);font-size:15px;font-weight:600;letter-spacing:.02em;line-height:1.2}
+  .formula{font-family:var(--serif);font-size:11.2px;line-height:2;color:var(--ink-soft)}
+  .formula b{font-weight:500;color:var(--ink);font-style:italic}
+  .compare{margin-top:5px;padding-top:5px;border-top:1px solid var(--line-soft);font-size:8.7px;line-height:1.7;color:var(--ink-soft)}
+  .compare b{font-family:var(--serif);font-weight:600;color:var(--red-deep);font-style:italic}
+  .frac{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;vertical-align:middle;line-height:1.02;margin:0 .16em;transform:translateY(-.04em)}
+  .frac .num{display:block;padding:0 .2em .06em;border-bottom:1px solid currentColor;white-space:nowrap}
+  .frac .den{display:block;padding:.06em .2em 0;white-space:nowrap}
+
+  /* ---------------------------------------------------------- responsive */
+  @media (max-height:860px){
+    #app{grid-template-rows:auto minmax(0,1fr) 174px;gap:12px 18px;padding:18px 24px 18px 30px}
+    .panel{padding:14px 15px 12px}
+    .panel-head{margin-bottom:8px}
+    .panel h2{font-size:21px}
+    .control{margin-top:7px}
+    .probe-card{margin-top:8px;padding:7px 9px}
+    .probe-e b{font-size:21px}
+    .derivation-card{padding:8px 9px 6px}
+    .formula{font-size:10px;line-height:1.85}
+  }
+  @media (max-height:860px) and (min-width:901px){
+    body{overflow:auto}
+    #app{height:auto;min-height:100dvh;grid-template-rows:auto 540px 174px}
+    .panel{height:540px}
+  }
+  @media (max-width:1100px){
+    #app{grid-template-columns:minmax(0,1fr) 352px;padding:18px 20px 18px 24px;gap:12px 16px}
+    .formula-stamp{display:none}
+    h1{font-size:46px}
+  }
+  @media (max-width:900px){
+    body{overflow:auto}
+    #app{display:flex;flex-direction:column;height:auto;min-height:100dvh;padding:16px;gap:12px}
+    header{order:0}
+    .stage{order:1;width:100%;height:58vh;min-height:400px;flex:none}
+    .panel{order:2;width:100%;max-height:none;overflow:visible}
+    .derivation{order:3;width:100%;grid-template-columns:1fr;gap:10px;min-height:0}
+    .derivation-card{overflow:visible}
+  }
+  @media (max-width:560px){
+    #app{padding:12px;gap:10px}
+    header p{font-size:11px}
+    h1{font-size:34px}
+    .title-line .en{display:none}
+    .stage{height:54vh;min-height:360px;border-radius:20px}
+    .stage-top{left:13px;right:13px;top:11px}
+    .stage-bottom{left:13px;right:13px;bottom:11px}
+    .legend{font-size:8px;gap:8px}
+    .hint{font-size:8.5px}
+    .panel{padding:16px 14px 14px;border-radius:20px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .status i{animation:none}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <div class="kicker"><a href="../index.html" title="返回 summer物理首页">← summer物理</a><span class="kicker-slash">/</span>ELECTROMAGNETISM · 静电场</div>
+      <div class="title-line"><h1>静电场</h1><span class="en">ELECTRIC FIELD &amp; POTENTIAL</span></div>
+      <p>点电荷、等量异种、等量同种与电极板：观察电场线、等势线，移动鼠标测量场强，拖动试探电荷看库仑力。</p>
+    </div>
+    <div class="formula-stamp"><span>FIELD → FORCE</span><b>E = kQ/r²</b></div>
+  </header>
+
+  <section class="stage" id="stage">
+    <canvas id="canvas"></canvas>
+    <div class="stage-top">
+      <div class="stage-tag"><span>04</span>静电场 / 场与势</div>
+      <div class="status" id="status"><i></i><b>移动鼠标探测</b></div>
+    </div>
+    <div class="probe-tip" id="probeTip"><b id="tipE">—</b><small id="tipV">—</small></div>
+    <div class="stage-bottom">
+      <div class="legend">
+        <span><i class="field"></i>电场线</span>
+        <span><i class="equi"></i>等势线</span>
+        <span><i class="test"></i>试探电荷</span>
+      </div>
+      <div class="hint">拖动 q₀ · 移动鼠标测 E</div>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="panel-head">
+      <div><div class="eyebrow">FIELD CONTROL</div><h2>场源设置</h2></div>
+      <span class="panel-note">实时计算</span>
+    </div>
+
+    <div class="mode-tabs" id="modeTabs">
+      <button type="button" data-mode="point" class="on">点电荷</button>
+      <button type="button" data-mode="dipole">等量异种</button>
+      <button type="button" data-mode="same">等量同种</button>
+      <button type="button" data-mode="plates">电极板</button>
+    </div>
+
+    <div class="sign-row">
+      <span>显示内容</span>
+      <div class="seg" id="viewSeg">
+        <button type="button" data-view="both" class="on">全部</button>
+        <button type="button" data-view="field">电场线</button>
+        <button type="button" data-view="equi">等势线</button>
+      </div>
+    </div>
+
+    <div class="sign-row" data-show="point same">
+      <span>场源电荷符号</span>
+      <div class="seg" id="sourceSignSeg">
+        <button type="button" data-sign="1" class="on">＋</button>
+        <button type="button" data-sign="-1">－</button>
+      </div>
+    </div>
+
+    <label class="control" data-show="point dipole same">
+      <span class="control-head"><span class="name">电荷量 <em>Q</em></span><span class="value"><b id="qVal">5.0</b><small>nC</small></span></span>
+      <input id="qRange" type="range" min="1" max="10" step="0.5" value="5" aria-label="电荷量">
+    </label>
+    <label class="control" data-show="dipole same plates">
+      <span class="control-head"><span class="name">间距 <em>d</em></span><span class="value"><b id="dVal">1.60</b><small>m</small></span></span>
+      <input id="dRange" type="range" min="0.8" max="2.4" step="0.05" value="1.6" aria-label="间距">
+    </label>
+    <label class="control" data-show="plates">
+      <span class="control-head"><span class="name">板间电压 <em>U</em></span><span class="value"><b id="uVal">400</b><small>V</small></span></span>
+      <input id="uRange" type="range" min="100" max="600" step="10" value="400" aria-label="板间电压">
+    </label>
+
+    <div class="probe-card">
+      <div class="probe-head"><span>场强探针</span><span id="probePos">移动鼠标到场上</span></div>
+      <div class="probe-e"><b id="probeE">—</b><small>N/C</small></div>
+      <div class="probe-v">电势 V = <b id="probeV">—</b> V</div>
+    </div>
+
+    <div class="sign-row">
+      <span>试探电荷符号</span>
+      <div class="seg" id="testSignSeg">
+        <button type="button" data-sign="1" class="on">＋</button>
+        <button type="button" data-sign="-1">－</button>
+      </div>
+    </div>
+
+    <div class="force-card">
+      <span>库仑力 F = q₀E</span>
+      <span class="fv"><b id="forceVal">—</b><small>nN</small></span>
+    </div>
+
+    <button class="reset-btn" id="resetBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/></svg>
+      重置试探电荷
+    </button>
+
+    <div class="panel-foot">
+      场源电荷单位 nC；场强单位 N/C；试探电荷 q₀ = 1 nC。电场线从正电荷出发、指向负电荷；等势线用青色虚线表示。电极板按有限长极板处理，边缘会显示外部电场。
+    </div>
+  </aside>
+
+  <section class="derivation">
+    <article class="derivation-card">
+      <div class="card-head"><span class="num">01</span><h3>点电荷的场</h3></div>
+      <div class="formula">
+        点电荷之间的作用力：库仑力<br>
+        F = k <span class="frac"><span class="num">Qq</span><span class="den">r²</span></span><br>
+        点电荷场强：E = k <span class="frac"><span class="num">Q</span><span class="den">r²</span></span><br>
+        点电荷电势：φ = k <span class="frac"><span class="num">Q</span><span class="den">r</span></span>
+      </div>
+      <div class="compare">
+        Q 为场源电荷，q 为试探电荷；正电荷场强背离电荷，负电荷场强指向电荷。
+      </div>
+    </article>
+
+    <article class="derivation-card">
+      <div class="card-head"><span class="num">02</span><h3>电场线与等势线</h3></div>
+      <div class="formula">
+        电场线：<br>
+        ① 由正电荷出发，指向负电荷；<br>
+        ② 指向电势降低的方向。<br>
+        等势线：与电场线垂直。
+      </div>
+    </article>
+
+    <article class="derivation-card">
+      <div class="card-head"><span class="num">03</span><h3>匀强电场</h3></div>
+      <div class="formula">
+        匀强电场方向：由正极板指向负极板<br>
+        宏观表达式：E = <span class="frac"><span class="num">U</span><span class="den">d</span></span><br>
+        微观表达式：E = −<span class="frac"><span class="num">dφ</span><span class="den">dx</span></span>
+      </div>
+      <div class="compare">
+        多个点电荷的电场按矢量叠加：<b>E = ΣE<sub>i</sub></b>。
+      </div>
+    </article>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const TAU = Math.PI * 2;
+  const K = 8.9875517923e9;
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const DOMAIN = { x0: -3.2, x1: 3.2, y0: -2.0, y1: 2.0 };
+  const PLATE_HALF_W = 1.16;
+  let plateCacheKey = "";
+  let plateCache = null;
+
+  const stage = $("#stage");
+  const canvas = $("#canvas");
+  const ctx = canvas.getContext("2d");
+
+  const state = {
+    mode: "point",
+    pointSign: 1,
+    sameSign: 1,
+    q: 5e-9,
+    d: 1.6,
+    voltage: 400,
+    test: { x: 0.9, y: 0.65 },
+    testSign: 1,
+    dragging: false,
+    probe: null,
+    view: "both",
+  };
+
+  const geom = { w: 0, h: 0, dpr: 1, cx: 0, cy: 0, scale: 100 };
+  let bgCanvas = null;
+  let fieldCache = { lines: [], segments: [] };
+  let drawQueued = false;
+
+  const px = (x) => geom.cx + x * geom.scale;
+  const py = (y) => geom.cy - y * geom.scale;
+  const inDomain = (x, y) => x > DOMAIN.x0 && x < DOMAIN.x1 && y > DOMAIN.y0 && y < DOMAIN.y1;
+
+  function charges() {
+    if (state.mode === "point") return [{ x: 0, y: 0, q: state.pointSign * state.q }];
+    if (state.mode === "dipole") return [
+      { x: -state.d / 2, y: 0, q: state.q },
+      { x: state.d / 2, y: 0, q: -state.q },
+    ];
+    if (state.mode === "same") return [
+      { x: -state.d / 2, y: 0, q: state.sameSign * state.q },
+      { x: state.d / 2, y: 0, q: state.sameSign * state.q },
+    ];
+    return [];
+  }
+
+  // 有限长极板用均匀带电线段近似，能自然产生边缘电场。
+  function plateRawField(x, y, lambda) {
+    const yTop = state.d / 2, yBot = -state.d / 2;
+    const L = PLATE_HALF_W * 2, n = 24, dx = L / n;
+    let ex = 0, ey = 0;
+    for (const [yp, sign] of [[yTop, 1], [yBot, -1]]) {
+      for (let i = 0; i < n; i++) {
+        const xp = -PLATE_HALF_W + (i + 0.5) * dx;
+        const ddx = x - xp, ddy = y - yp;
+        const r2 = Math.max(ddx * ddx + ddy * ddy, 0.0009);
+        const inv = K * lambda * sign / (r2 * Math.sqrt(r2));
+        ex += inv * ddx;
+        ey += inv * ddy;
+      }
+    }
+    return { x: ex, y: ey, mag: Math.hypot(ex, ey) };
+  }
+
+  function plateRawPotential(x, y, lambda) {
+    const yTop = state.d / 2, yBot = -state.d / 2;
+    const L = PLATE_HALF_W * 2, n = 24, dx = L / n;
+    let v = 0;
+    for (const [yp, sign] of [[yTop, 1], [yBot, -1]]) {
+      for (let i = 0; i < n; i++) {
+        const xp = -PLATE_HALF_W + (i + 0.5) * dx;
+        const r = Math.max(Math.hypot(x - xp, y - yp), 0.045);
+        v += K * lambda * sign / r * dx;
+      }
+    }
+    return v;
+  }
+
+  function plateInfo() {
+    const key = `${state.d}|${state.voltage}`;
+    if (key === plateCacheKey && plateCache) return plateCache;
+    const raw = plateRawField(0, 0, 1);
+    const E0 = state.voltage / state.d;
+    const lambda = raw.mag > 1e-9 ? E0 / raw.mag : 1;
+    plateCache = {
+      yTop: state.d / 2,
+      yBot: -state.d / 2,
+      L: PLATE_HALF_W * 2,
+      E: E0,
+      lambda,
+    };
+    plateCacheKey = key;
+    return plateCache;
+  }
+
+  function fieldAt(x, y) {
+    if (state.mode === "plates") {
+      return plateRawField(x, y, plateInfo().lambda);
+    }
+    let ex = 0, ey = 0;
+    for (const c of charges()) {
+      const dx = x - c.x, dy = y - c.y;
+      const r2 = dx * dx + dy * dy;
+      const r2s = Math.max(r2, 0.0009);
+      const inv = K * c.q / (r2s * Math.sqrt(r2s));
+      ex += inv * dx;
+      ey += inv * dy;
+    }
+    return { x: ex, y: ey, mag: Math.hypot(ex, ey) };
+  }
+
+  function potentialAt(x, y) {
+    if (state.mode === "plates") {
+      return plateRawPotential(x, y, plateInfo().lambda);
+    }
+    let v = 0;
+    for (const c of charges()) {
+      const r = Math.max(Math.hypot(x - c.x, y - c.y), 0.045);
+      v += K * c.q / r;
+    }
+    return v;
+  }
+
+  function fmtE(v) {
+    if (!Number.isFinite(v)) return "—";
+    if (v >= 10000) return (v / 1000).toFixed(1) + "k";
+    if (v >= 100) return v.toFixed(0);
+    if (v >= 10) return v.toFixed(1);
+    return v.toFixed(2);
+  }
+  function fmtV(v) {
+    if (!Number.isFinite(v)) return "—";
+    if (Math.abs(v) >= 1000) return (v / 1000).toFixed(2) + "k";
+    if (Math.abs(v) >= 10) return v.toFixed(1);
+    return v.toFixed(2);
+  }
+
+  // ------------------------------------------------------------- field cache
+  function traceLine(sx0, sy0, dir) {
+    const pts = [];
+    let x = sx0, y = sy0;
+    const step = 0.028;
+    for (let i = 0; i < 1400; i++) {
+      if (!inDomain(x, y)) break;
+      if (state.mode === "same" && Math.hypot(x, y) < 0.115) break;
+      const f = fieldAt(x, y);
+      if (!Number.isFinite(f.mag) || f.mag < 0.05) break;
+      pts.push([x, y]);
+      const ux = dir * f.x / f.mag, uy = dir * f.y / f.mag;
+      x += ux * step;
+      y += uy * step;
+      if (pts.length > 3) {
+        let hit = false;
+        for (const c of charges()) if (Math.hypot(x - c.x, y - c.y) < 0.055) { hit = true; break; }
+        if (state.mode === "plates") {
+          const p = plateInfo();
+          if (Math.abs(x) <= p.L / 2 &&
+              (Math.abs(y - p.yTop) < 0.035 || Math.abs(y - p.yBot) < 0.035)) hit = true;
+        }
+        if (hit) { pts.push([x, y]); break; }
+      }
+    }
+    return pts;
+  }
+
+  function buildLines() {
+    const lines = [];
+    if (state.mode === "plates") {
+      const p = plateInfo(), n = 14, L = p.L;
+      for (let i = 0; i < n; i++) {
+        const x = -L / 2 + (i + 0.5) * L / n;
+        // 上极板上方与内部、下极板下方：覆盖极板外部边缘场。
+        lines.push({ pts: traceLine(x, p.yTop + 0.035, 1), dir: 1 });
+        lines.push({ pts: traceLine(x, p.yTop - 0.035, 1), dir: 1 });
+        lines.push({ pts: traceLine(x, p.yBot - 0.035, -1), dir: -1 });
+      }
+      return lines.filter((l) => l.pts.length > 6);
+    }
+    const cs = charges();
+
+    if (state.mode === "point") {
+      const c = cs[0], dir = c.q > 0 ? 1 : -1;
+      const count = 40;
+      for (let i = 0; i < count; i++) {
+        const a = TAU * i / count;
+        const dx = Math.cos(a), dy = Math.sin(a);
+        const ts = [];
+        if (dx > 1e-6) ts.push((DOMAIN.x1 - c.x) / dx);
+        if (dx < -1e-6) ts.push((DOMAIN.x0 - c.x) / dx);
+        if (dy > 1e-6) ts.push((DOMAIN.y1 - c.y) / dy);
+        if (dy < -1e-6) ts.push((DOMAIN.y0 - c.y) / dy);
+        const t = Math.min(...ts.filter((v) => v > 0)) - 0.03;
+        if (t > 0.1) {
+          const x0 = c.x + dx * 0.06, y0 = c.y + dy * 0.06;
+          const x1 = c.x + dx * t, y1 = c.y + dy * t;
+          lines.push({ pts: [[x0, y0], [x1, y1]], dir });
+        }
+      }
+      return lines;
+    }
+
+    // 等量异种：正、负电荷都布种，正电荷外侧与负电荷外侧都不会缺线。
+    const count = state.mode === "dipole" ? 20 : 28;
+    for (const c of cs) {
+      const dir = c.q > 0 ? 1 : -1;
+      for (let i = 0; i < count; i++) {
+        const a = TAU * i / count;
+        const pts = traceLine(c.x + Math.cos(a) * 0.06, c.y + Math.sin(a) * 0.06, dir);
+        if (pts.length <= 6) continue;
+        // 等量同种电荷：中轴附近笔直的场线不画，保留中性点空区。
+        if (state.mode === "same") {
+          const maxAbsY = Math.max(...pts.map((p) => Math.abs(p[1])));
+          if (maxAbsY < 0.045) continue;
+        }
+        lines.push({ pts, dir });
+      }
+    }
+    return lines;
+  }
+
+  function contourSegments(level) {
+    const nx = 132, ny = 86;
+    const dx = (DOMAIN.x1 - DOMAIN.x0) / nx;
+    const dy = (DOMAIN.y1 - DOMAIN.y0) / ny;
+    const vals = new Float64Array((nx + 1) * (ny + 1));
+    for (let j = 0; j <= ny; j++) {
+      const y = DOMAIN.y0 + j * dy;
+      for (let i = 0; i <= nx; i++) vals[j * (nx + 1) + i] = potentialAt(DOMAIN.x0 + i * dx, y);
+    }
+    const segs = [];
+    const edge = (x1, y1, v1, x2, y2, v2, out) => {
+      const a = v1 - level, b = v2 - level;
+      if (a === 0 || b === 0 || a * b > 0) return;
+      const t = (level - v1) / (v2 - v1);
+      out.push([x1 + (x2 - x1) * t, y1 + (y2 - y1) * t]);
+    };
+    for (let j = 0; j < ny; j++) {
+      const y0 = DOMAIN.y0 + j * dy, y1 = y0 + dy;
+      for (let i = 0; i < nx; i++) {
+        const x0 = DOMAIN.x0 + i * dx, x1 = x0 + dx;
+        const v00 = vals[j * (nx + 1) + i], v10 = vals[j * (nx + 1) + i + 1];
+        const v11 = vals[(j + 1) * (nx + 1) + i + 1], v01 = vals[(j + 1) * (nx + 1) + i];
+        const pts = [];
+        edge(x0, y0, v00, x1, y0, v10, pts);
+        edge(x1, y0, v10, x1, y1, v11, pts);
+        edge(x1, y1, v11, x0, y1, v01, pts);
+        edge(x0, y1, v01, x0, y0, v00, pts);
+        if (pts.length === 2) segs.push([pts[0], pts[1]]);
+        else if (pts.length === 4) { segs.push([pts[0], pts[1]]); segs.push([pts[2], pts[3]]); }
+      }
+    }
+    return segs;
+  }
+
+  function buildContours() {
+    const v0 = K * state.q / 0.9;
+    let levels;
+    if (state.mode === "plates") {
+      const p = plateInfo();
+      const vref = Math.abs(potentialAt(0, p.yTop - 0.08)) || state.voltage / 2;
+      levels = [0];
+      for (const m of [0.2, 0.4, 0.6, 0.8]) levels.push(m * vref, -m * vref);
+    } else if (state.mode === "point") {
+      levels = [0.45, 0.65, 0.9, 1.3, 2, 2.8, 4.5].map((m) => state.pointSign * m * v0);
+    } else if (state.mode === "dipole") {
+      levels = [-2.8, -1.3, -0.65, -0.45, 0.45, 0.65, 1.3, 2.8].map((m) => m * v0).concat(0);
+    } else {
+      levels = [0.3, 0.45, 0.65, 0.9, 1.3, 2, 2.8].map((m) => state.sameSign * m * v0);
+    }
+    const segs = [];
+    for (const l of levels) {
+      if (!Number.isFinite(l)) continue;
+      for (const s of contourSegments(l)) segs.push(s);
+    }
+    return segs;
+  }
+
+  function rebuildField() {
+    fieldCache.lines = buildLines();
+    fieldCache.segments = buildContours();
+    requestDraw();
+  }
+
+  // ------------------------------------------------------------- geometry
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(1, rect.width), h = Math.max(1, rect.height);
+    geom.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    geom.w = w; geom.h = h;
+    canvas.width = Math.round(w * geom.dpr);
+    canvas.height = Math.round(h * geom.dpr);
+    ctx.setTransform(geom.dpr, 0, 0, geom.dpr, 0, 0);
+    geom.cx = w * 0.5;
+    geom.cy = h * 0.52;
+    geom.scale = Math.min((w - 86) / 6.4, (h - 74) / 4.0);
+    buildBackground();
+    requestDraw();
+  }
+
+  function buildBackground() {
+    const w = geom.w, h = geom.h, dpr = geom.dpr;
+    const bg = document.createElement("canvas");
+    bg.width = Math.round(w * dpr); bg.height = Math.round(h * dpr);
+    const b = bg.getContext("2d");
+    b.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const grad = b.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, "#fcf9f2"); grad.addColorStop(0.58, "#faf6ed"); grad.addColorStop(1, "#f4eee2");
+    b.fillStyle = grad; b.fillRect(0, 0, w, h);
+    const glow = b.createRadialGradient(geom.cx, geom.cy, 8, geom.cx, geom.cy, Math.max(w, h) * 0.7);
+    glow.addColorStop(0, "rgba(47,117,128,.035)"); glow.addColorStop(1, "rgba(47,117,128,0)");
+    b.fillStyle = glow; b.fillRect(0, 0, w, h);
+    const step = w < 620 ? 23 : 29;
+    b.fillStyle = "rgba(53,43,29,.10)";
+    for (let y = step * 0.7; y < h; y += step) for (let x = step * 0.6; x < w; x += step) {
+      b.beginPath(); b.arc(x, y, 0.85, 0, TAU); b.fill();
+    }
+    bgCanvas = bg;
+  }
+
+  function requestDraw() {
+    if (drawQueued) return;
+    drawQueued = true;
+    requestAnimationFrame(() => { drawQueued = false; draw(); });
+  }
+
+  // ------------------------------------------------------------- drawing
+  function arrowHead(x, y, angle, color, size = 5.5) {
+    ctx.save(); ctx.fillStyle = color;
+    ctx.beginPath(); ctx.moveTo(x, y);
+    ctx.lineTo(x - Math.cos(angle - 0.42) * size, y - Math.sin(angle - 0.42) * size);
+    ctx.lineTo(x - Math.cos(angle + 0.42) * size, y - Math.sin(angle + 0.42) * size);
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+
+  function haloText(text, x, y, color, font, align = "center", baseline = "middle") {
+    ctx.save(); ctx.font = font; ctx.textAlign = align; ctx.textBaseline = baseline;
+    ctx.lineJoin = "round"; ctx.strokeStyle = "rgba(250,247,239,.95)"; ctx.lineWidth = 5;
+    ctx.strokeText(text, x, y); ctx.fillStyle = color; ctx.fillText(text, x, y); ctx.restore();
+  }
+
+  function drawFieldLines() {
+    ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.strokeStyle = "rgba(201,68,47,.43)"; ctx.lineWidth = 1.05;
+    for (const line of fieldCache.lines) {
+      const pts = line.pts;
+      if (pts.length < 2) continue;
+      ctx.beginPath(); ctx.moveTo(px(pts[0][0]), py(pts[0][1]));
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(px(pts[i][0]), py(pts[i][1]));
+      ctx.stroke();
+      if (pts.length < 3) {
+        const x1 = px(pts[0][0]), y1 = py(pts[0][1]);
+        const x2 = px(pts[1][0]), y2 = py(pts[1][1]);
+        let ang = Math.atan2(y2 - y1, x2 - x1);
+        if (line.dir < 0) ang += Math.PI;
+        for (const t of [0.35, 0.72]) {
+          arrowHead(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t, ang, "rgba(201,68,47,.7)", 4.6);
+        }
+        continue;
+      }
+      const marks = [0.28, 0.55, 0.82];
+      for (const f of marks) {
+        const idx = clamp(Math.floor(f * (pts.length - 1)), 1, pts.length - 2);
+        const x1 = px(pts[idx - 1][0]), y1 = py(pts[idx - 1][1]);
+        const x2 = px(pts[idx + 1][0]), y2 = py(pts[idx + 1][1]);
+        let ang = Math.atan2(y2 - y1, x2 - x1);
+        if (line.dir < 0) ang += Math.PI;
+        arrowHead(px(pts[idx][0]), py(pts[idx][1]), ang, "rgba(201,68,47,.7)", 4.6);
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawEquipotentials() {
+    ctx.save(); ctx.setLineDash([4, 5]);
+    ctx.strokeStyle = "rgba(47,117,128,.68)"; ctx.lineWidth = 1.05;
+    ctx.beginPath();
+    for (const seg of fieldCache.segments) {
+      ctx.moveTo(px(seg[0][0]), py(seg[0][1]));
+      ctx.lineTo(px(seg[1][0]), py(seg[1][1]));
+    }
+    ctx.stroke();
+    if (state.mode === "dipole") {
+      // 等量异种电荷的零等势线：两电荷连线的中垂线。
+      ctx.beginPath();
+      ctx.moveTo(px(0), py(-1.85));
+      ctx.lineTo(px(0), py(1.85));
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawNeutralPoint() {
+    if (state.mode !== "same") return;
+    const x = px(0), y = py(0);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, 4.2, 0, TAU);
+    ctx.fillStyle = "#fbf8f1";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(36,35,31,.45)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+    haloText("E = 0", x, y - 13, "rgba(89,85,75,.65)",
+      '500 8px "Noto Sans SC","Microsoft YaHei",sans-serif');
+  }
+
+  function drawCharges() {
+    if (state.mode === "plates") {
+      const p = plateInfo();
+      const x1 = px(-p.L / 2), x2 = px(p.L / 2);
+      const yTop = py(p.yTop), yBot = py(p.yBot);
+      ctx.save(); ctx.lineCap = "round"; ctx.lineWidth = 6;
+      ctx.strokeStyle = "rgba(201,68,47,.85)";
+      ctx.beginPath(); ctx.moveTo(x1, yTop); ctx.lineTo(x2, yTop); ctx.stroke();
+      ctx.strokeStyle = "rgba(47,117,128,.85)";
+      ctx.beginPath(); ctx.moveTo(x1, yBot); ctx.lineTo(x2, yBot); ctx.stroke();
+      ctx.restore();
+      ctx.save(); ctx.font = '600 15px "Noto Serif SC",serif';
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = "#a72f1e"; ctx.fillText("＋", x1 + 10, yTop - 14);
+      ctx.fillStyle = "#1f5f68"; ctx.fillText("－", x1 + 10, yBot + 14);
+      ctx.restore();
+      return;
+    }
+    for (const c of charges()) {
+      const x = px(c.x), y = py(c.y), r = clamp(0.16 * geom.scale, 12, 22);
+      const color = c.q >= 0 ? "#c9442f" : "#2f7580", deep = c.q >= 0 ? "#7e1d10" : "#123f47";
+      ctx.save();
+      const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
+      g.addColorStop(0, c.q >= 0 ? "#e2684f" : "#5a9aa1"); g.addColorStop(1, color);
+      ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fillStyle = g; ctx.fill();
+      ctx.lineWidth = 1.4; ctx.strokeStyle = deep; ctx.stroke();
+      ctx.fillStyle = "#fbf8f1"; ctx.font = `600 ${Math.round(r * 1.15)}px "Noto Serif SC",serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(c.q >= 0 ? "＋" : "－", x, y + 0.5);
+      ctx.restore();
+    }
+  }
+
+  function drawTestCharge() {
+    const x = px(state.test.x), y = py(state.test.y);
+    const f = fieldAt(state.test.x, state.test.y);
+    const sign = state.testSign, fx = sign * f.x, fy = sign * f.y, fmag = Math.hypot(fx, fy);
+    if (fmag > 0.001) {
+      const len = clamp(fmag * 0.16, 14, 92), ux = fx / fmag, uy = fy / fmag;
+      const x1 = x + ux * 10, y1 = y - uy * 10, x2 = x + ux * (10 + len), y2 = y - uy * (10 + len);
+      ctx.save(); ctx.strokeStyle = "#b78310"; ctx.fillStyle = "#b78310"; ctx.lineWidth = 2; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - ux * 5, y2 + uy * 5); ctx.stroke();
+      arrowHead(x2, y2, Math.atan2(-uy, ux), "#b78310", 8);
+      ctx.restore();
+      haloText("F", x2 + ux * 12, y2 + uy * 12, "#93670a", 'italic 600 12px "Cambria Math","Noto Serif SC",Georgia,serif');
+    }
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, 10, 0, TAU); ctx.fillStyle = "rgba(183,131,16,.1)"; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, 5.2, 0, TAU); ctx.fillStyle = "#fbf8f1"; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = "#b78310"; ctx.stroke();
+    ctx.fillStyle = "#93670a"; ctx.font = '600 10px "Noto Serif SC",serif';
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(state.testSign > 0 ? "＋" : "－", x, y + 0.5);
+    ctx.restore();
+  }
+
+  function drawProbe() {
+    const p = state.probe;
+    if (!p) return;
+    const x = px(p.x), y = py(p.y);
+    ctx.save(); ctx.strokeStyle = "rgba(36,35,31,.5)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(x, y, 6, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 10, y); ctx.lineTo(x + 10, y); ctx.moveTo(x, y - 10); ctx.lineTo(x, y + 10); ctx.stroke();
+    if (p.E.mag > 0.001) {
+      const len = 22, ux = p.E.x / p.E.mag, uy = p.E.y / p.E.mag;
+      ctx.strokeStyle = "#2f7580"; ctx.fillStyle = "#2f7580"; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + ux * len, y - uy * len); ctx.stroke();
+      arrowHead(x + ux * len, y - uy * len, Math.atan2(-uy, ux), "#2f7580", 6);
+    }
+    ctx.restore();
+  }
+
+  function draw() {
+    if (!bgCanvas) return;
+    ctx.clearRect(0, 0, geom.w, geom.h);
+    ctx.drawImage(bgCanvas, 0, 0, geom.w, geom.h);
+    if (state.view !== "equi") drawFieldLines();
+    if (state.view !== "field") drawEquipotentials();
+    drawNeutralPoint();
+    drawCharges(); drawTestCharge(); drawProbe();
+  }
+
+  // ------------------------------------------------------------- HUD
+  function updateProbeUI() {
+    const p = state.probe;
+    if (!p) {
+      $("#probeE").textContent = "—"; $("#probeV").textContent = "—";
+      $("#probePos").textContent = "移动鼠标到场上";
+      $("#tipE").innerHTML = "—"; $("#tipV").textContent = "—";
+      return;
+    }
+    $("#probeE").textContent = fmtE(p.E.mag);
+    $("#probeV").textContent = fmtV(p.V);
+    $("#probePos").textContent = `x ${p.x.toFixed(2)} m · y ${p.y.toFixed(2)} m`;
+    $("#tipE").innerHTML = `${fmtE(p.E.mag)}<span>N/C</span>`;
+    $("#tipV").textContent = `V = ${fmtV(p.V)} V　θ = ${(Math.atan2(p.E.y, p.E.x) * 180 / Math.PI).toFixed(0)}°`;
+  }
+
+  function updateForceUI() {
+    const f = fieldAt(state.test.x, state.test.y);
+    $("#forceVal").textContent = fmtE(f.mag);
+  }
+
+  function showTip(clientX, clientY) {
+    const tip = $("#probeTip"), srect = stage.getBoundingClientRect();
+    tip.classList.add("on");
+    const tw = tip.offsetWidth || 130, th = tip.offsetHeight || 50;
+    let left = clientX - srect.left + 14, top = clientY - srect.top - th - 10;
+    if (left + tw > srect.width - 12) left = clientX - srect.left - tw - 14;
+    if (top < 12) top = clientY - srect.top + 14;
+    tip.style.left = `${clamp(left, 10, srect.width - tw - 10)}px`;
+    tip.style.top = `${clamp(top, 10, srect.height - th - 10)}px`;
+  }
+
+  function hideTip() { $("#probeTip").classList.remove("on"); }
+
+  function physicalPoint(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left - geom.cx) / geom.scale,
+      y: (geom.cy - (e.clientY - rect.top)) / geom.scale,
+    };
+  }
+
+  function nearTest(e) {
+    const rect = canvas.getBoundingClientRect();
+    const dx = e.clientX - rect.left - px(state.test.x);
+    const dy = e.clientY - rect.top - py(state.test.y);
+    return Math.hypot(dx, dy) <= 20;
+  }
+
+  function syncSourceSign() {
+    const sign = state.mode === "point" ? state.pointSign : state.sameSign;
+    for (const b of $("#sourceSignSeg").querySelectorAll("button")) {
+      b.classList.toggle("on", Number(b.dataset.sign) === sign);
+    }
+  }
+
+  function refreshProbe() {
+    if (!state.probe) return;
+    const f = fieldAt(state.probe.x, state.probe.y);
+    state.probe.E = f;
+    state.probe.V = potentialAt(state.probe.x, state.probe.y);
+    updateProbeUI();
+  }
+
+  function setMode(mode) {
+    state.mode = mode;
+    state.probe = null;
+    const defaults = { point: { x: 0.9, y: 0.65 }, dipole: { x: 0.8, y: 0.75 }, same: { x: 0.0, y: 0.9 }, plates: { x: 0.0, y: 0.25 } };
+    state.test = { ...defaults[mode] };
+    for (const b of $("#modeTabs").querySelectorAll("button")) b.classList.toggle("on", b.dataset.mode === mode);
+    for (const el of document.querySelectorAll("[data-show]")) el.hidden = !el.dataset.show.split(" ").includes(mode);
+    syncSourceSign();
+    hideTip();
+    updateProbeUI(); updateForceUI(); rebuildField(); draw();
+  }
+
+  function setSourceSign(sign) {
+    if (state.mode === "point") state.pointSign = sign;
+    else state.sameSign = sign;
+    syncSourceSign();
+    rebuildField(); refreshProbe(); updateForceUI(); draw();
+  }
+
+  function setView(view) {
+    state.view = view;
+    for (const b of $("#viewSeg").querySelectorAll("button")) {
+      b.classList.toggle("on", b.dataset.view === view);
+    }
+    requestDraw();
+  }
+
+  // ------------------------------------------------------------- interactions
+  $("#modeTabs").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-mode]");
+    if (b) setMode(b.dataset.mode);
+  });
+
+  $("#sourceSignSeg").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-sign]");
+    if (b) setSourceSign(Number(b.dataset.sign));
+  });
+
+  $("#viewSeg").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-view]");
+    if (b) setView(b.dataset.view);
+  });
+
+  $("#testSignSeg").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-sign]");
+    if (!b) return;
+    state.testSign = Number(b.dataset.sign);
+    for (const x of $("#testSignSeg").querySelectorAll("button")) x.classList.toggle("on", x === b);
+    updateForceUI(); draw();
+  });
+
+  $("#qRange").addEventListener("input", (e) => {
+    state.q = Number(e.target.value) * 1e-9;
+    $("#qVal").textContent = Number(e.target.value).toFixed(1);
+    rebuildField(); refreshProbe(); updateForceUI(); draw();
+  });
+  $("#dRange").addEventListener("input", (e) => {
+    state.d = Number(e.target.value); $("#dVal").textContent = state.d.toFixed(2);
+    state.probe = null; updateProbeUI(); rebuildField(); updateForceUI(); draw();
+  });
+  $("#uRange").addEventListener("input", (e) => {
+    state.voltage = Number(e.target.value); $("#uVal").textContent = state.voltage.toFixed(0);
+    rebuildField(); refreshProbe(); updateForceUI(); draw();
+  });
+
+  canvas.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (!nearTest(e)) return;
+    e.preventDefault();
+    state.dragging = true; state.probe = null; hideTip(); updateProbeUI();
+    canvas.setPointerCapture?.(e.pointerId); canvas.style.cursor = "grabbing"; draw();
+  });
+
+  canvas.addEventListener("pointermove", (e) => {
+    if (state.dragging) {
+      e.preventDefault();
+      const p = physicalPoint(e);
+      state.test.x = clamp(p.x, DOMAIN.x0 + 0.12, DOMAIN.x1 - 0.12);
+      state.test.y = clamp(p.y, DOMAIN.y0 + 0.12, DOMAIN.y1 - 0.12);
+      updateForceUI(); draw(); return;
+    }
+    canvas.style.cursor = nearTest(e) ? "grab" : "crosshair";
+    const p = physicalPoint(e);
+    if (!inDomain(p.x, p.y)) {
+      state.probe = null; hideTip(); updateProbeUI(); draw(); return;
+    }
+    const f = fieldAt(p.x, p.y);
+    state.probe = { x: p.x, y: p.y, E: f, V: potentialAt(p.x, p.y) };
+    updateProbeUI(); showTip(e.clientX, e.clientY); draw();
+  });
+
+  function endDrag(e) {
+    if (!state.dragging) return;
+    state.dragging = false;
+    if (canvas.hasPointerCapture?.(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    canvas.style.cursor = nearTest(e) ? "grab" : "crosshair"; draw();
+  }
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+  canvas.addEventListener("pointerleave", () => {
+    if (state.dragging) return;
+    state.probe = null; hideTip(); updateProbeUI(); draw();
+  });
+
+  $("#resetBtn").addEventListener("click", () => setMode(state.mode));
+
+  window.__field = {
+    get state() { return { ...state, test: { ...state.test }, probe: state.probe }; },
+    setMode,
+    setView,
+    setTest(x, y) {
+      state.test.x = clamp(x, DOMAIN.x0 + 0.1, DOMAIN.x1 - 0.1);
+      state.test.y = clamp(y, DOMAIN.y0 + 0.1, DOMAIN.y1 - 0.1);
+      updateForceUI(); draw();
+    },
+    setProbe(x, y) {
+      const f = fieldAt(x, y);
+      state.probe = { x, y, E: f, V: potentialAt(x, y) };
+      updateProbeUI(); draw();
+      return { E: f.mag, V: state.probe.V };
+    },
+    testPoint() { return { x: px(state.test.x), y: py(state.test.y) }; },
+    screenPoint(x, y) {
+      const r = canvas.getBoundingClientRect();
+      return { x: r.left + px(x), y: r.top + py(y) };
+    },
+    fieldAt, potentialAt,
+  };
+
+  const ro = new ResizeObserver(() => { resize(); draw(); });
+  ro.observe(stage);
+  setMode("point");
+  resize();
+  updateForceUI(); updateProbeUI(); draw();
+})();
+</script>
+</body>
+</html>

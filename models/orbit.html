@@ -1,0 +1,1185 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>天体轨道 · summer物理</title>
+<meta name="description" content="天体轨道与变轨模型：观察圆轨道、转移椭圆和 A、B 切点，比较不同位置的加速度、速度与角速度。">
+<meta name="theme-color" content="#f3eee4">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --paper:#f3eee4;
+    --paper-hi:#fbf8f1;
+    --ink:#24231f;
+    --ink-soft:#59554b;
+    --muted:#8b8375;
+    --red:#c9442f;
+    --red-deep:#a72f1e;
+    --gold:#b78310;
+    --teal:#2f7580;
+    --teal-deep:#1f5f68;
+    --earth:#dfece9;
+    --line:rgba(36,35,31,.13);
+    --line-soft:rgba(36,35,31,.075);
+    --serif:"Noto Serif SC","Songti SC","STSong",Georgia,serif;
+    --sans:"Noto Sans SC","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+    --mono:"Cascadia Mono","SFMono-Regular",Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;overflow:hidden;color:var(--ink);font-family:var(--sans);
+    background:
+      radial-gradient(1100px 680px at 8% -8%,rgba(255,255,255,.72),transparent 64%),
+      radial-gradient(1000px 760px at 98% 104%,rgba(188,158,108,.18),transparent 62%),
+      var(--paper);
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(rgba(58,48,34,.13) .55px,transparent .7px);
+    background-size:3px 3px;opacity:.22;mix-blend-mode:multiply;
+  }
+  button,input{font:inherit;color:inherit}
+  button{cursor:pointer}
+  #app{
+    position:relative;z-index:1;height:100dvh;max-width:1780px;margin:0 auto;
+    display:grid;grid-template-columns:minmax(0,1fr) 380px;
+    grid-template-rows:auto minmax(0,1fr) 238px;
+    gap:14px 22px;padding:24px 30px 24px 38px;
+  }
+
+  /* ---------------------------------------------------------- header */
+  header{grid-column:1/-1;grid-row:1;display:flex;align-items:flex-end;justify-content:space-between;gap:26px;min-width:0;padding:1px 2px 0}
+  .kicker{display:flex;align-items:center;gap:10px;color:var(--red);font-size:9.5px;font-weight:700;letter-spacing:.26em;text-transform:uppercase}
+  .kicker::before{content:"";width:28px;height:1px;background:var(--red)}
+  .kicker a{color:var(--red);text-decoration:none;text-transform:none;letter-spacing:.08em;border-bottom:1px solid transparent;transition:border-color .18s,color .18s}
+  .kicker a:hover{color:var(--red-deep);border-color:rgba(201,68,47,.45)}
+  .kicker .kicker-slash{color:var(--muted);opacity:.55;font-weight:400;letter-spacing:0;margin:0 1px}
+  .title-line{display:flex;align-items:baseline;gap:16px;margin:6px 0 4px}
+  h1{margin:0;font-family:var(--serif);font-size:clamp(38px,4.3vw,56px);line-height:1.06;font-weight:700;letter-spacing:.04em}
+  .title-line .en{font-size:9px;letter-spacing:.2em;color:var(--muted);font-weight:600;white-space:nowrap}
+  header p{margin:0;font-size:12.5px;line-height:1.65;color:var(--ink-soft);letter-spacing:.012em}
+  .formula-stamp{display:flex;flex-direction:column;align-items:flex-end;gap:3px;padding-left:22px;border-left:1px solid var(--line);white-space:nowrap;margin-bottom:3px}
+  .formula-stamp span{font-size:8.5px;letter-spacing:.17em;color:var(--muted);font-weight:600}
+  .formula-stamp b{font-family:var(--serif);font-style:italic;font-size:18px;font-weight:500;letter-spacing:.01em}
+
+  /* ---------------------------------------------------------- stage */
+  .stage{
+    grid-column:1;grid-row:2;position:relative;min-width:0;min-height:0;overflow:hidden;
+    border:1px solid rgba(36,35,31,.15);border-radius:25px;background:var(--paper-hi);
+    box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 26px 60px -48px rgba(56,40,22,.7);
+  }
+  .stage::after{content:"";position:absolute;inset:8px;border-radius:18px;border:1px solid rgba(36,35,31,.045);pointer-events:none}
+  #canvas{display:block;width:100%;height:100%;touch-action:none;cursor:default}
+  .stage-top{position:absolute;left:19px;right:19px;top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:none}
+  .stage-tag{display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:.16em;color:var(--muted);font-weight:600}
+  .stage-tag span{display:inline-grid;place-items:center;width:21px;height:21px;border:1px solid var(--line);border-radius:50%;font-family:var(--mono);font-size:8.5px;letter-spacing:0;color:var(--ink-soft)}
+  .status{display:flex;align-items:center;gap:7px;padding:5px 10px 5px 9px;border:1px solid rgba(36,35,31,.12);border-radius:999px;background:rgba(250,247,239,.72);backdrop-filter:blur(8px);font-size:10px;color:var(--ink-soft);letter-spacing:.04em}
+  .status i{width:5px;height:5px;border-radius:50%;background:var(--red);box-shadow:0 0 0 0 rgba(201,68,47,.45);animation:pulse 1.9s ease-out infinite}
+  .status b{font-weight:500}
+  .status.paused i{background:#9d9588;animation:none;box-shadow:none}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(201,68,47,.4)}70%{box-shadow:0 0 0 6px rgba(201,68,47,0)}100%{box-shadow:0 0 0 0 rgba(201,68,47,0)}}
+  .stage-bottom{position:absolute;left:19px;right:19px;bottom:14px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;pointer-events:none}
+  .legend{display:flex;align-items:center;gap:14px;padding:6px 10px;border:1px solid rgba(36,35,31,.09);border-radius:9px;background:rgba(250,247,239,.72);backdrop-filter:blur(6px);font-size:9px;color:var(--ink-soft)}
+  .legend span{display:flex;align-items:center;gap:5px;white-space:nowrap}
+  .legend i{display:block;width:14px;height:2px;border-radius:2px;position:relative}
+  .legend i::after{content:"";position:absolute;right:-1px;top:-2.5px;border-left:4px solid currentColor;border-top:3px solid transparent;border-bottom:3px solid transparent}
+  .legend .v{background:var(--gold);color:var(--gold)}
+  .legend .a{background:var(--red);color:var(--red)}
+  .hint{display:flex;align-items:center;gap:7px;margin-left:auto;padding:6px 11px;border:1px solid rgba(36,35,31,.1);border-radius:999px;background:rgba(250,247,239,.76);backdrop-filter:blur(6px);font-size:9.5px;color:var(--ink-soft);letter-spacing:.03em}
+  .hint::before{content:"";width:6px;height:6px;border-radius:50%;border:1px solid var(--red);box-shadow:inset 0 0 0 1.5px rgba(201,68,47,.25)}
+
+  /* ---------------------------------------------------------- panel */
+  .panel{
+    grid-column:2;grid-row:2;align-self:stretch;min-height:0;overflow:auto;
+    padding:19px 19px 16px;border:1px solid rgba(36,35,31,.14);border-radius:25px;
+    background:linear-gradient(168deg,rgba(255,253,248,.79),rgba(255,251,241,.56));
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    box-shadow:0 1px 0 rgba(255,255,255,.86) inset,0 32px 80px -58px rgba(56,40,22,.62);
+    scrollbar-width:none;
+  }
+  .panel::-webkit-scrollbar{display:none}
+  .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+  .eyebrow{font-size:8.5px;font-weight:700;letter-spacing:.23em;color:var(--red)}
+  .panel h2{font-family:var(--serif);font-size:23px;line-height:1.2;font-weight:700;margin:3px 0 0;letter-spacing:.03em}
+  .panel-note{font-size:8.5px;letter-spacing:.12em;color:var(--muted);padding-top:4px;white-space:nowrap}
+  .panel-note::before{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--red);margin-right:6px;vertical-align:1px}
+
+  .orbit-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:3px;border:1px solid rgba(36,35,31,.1);border-radius:10px;background:rgba(255,255,255,.16)}
+  .orbit-tabs button{border:0;background:none;padding:6px 3px;border-radius:7px;font-size:9px;letter-spacing:.03em;color:var(--muted);line-height:1.25;transition:background .15s,color .15s}
+  .orbit-tabs button:hover{color:var(--ink-soft)}
+  .orbit-tabs button.on{background:rgba(47,117,128,.12);color:var(--teal-deep);font-weight:600}
+
+  .control{display:block;margin:10px 0 0}
+  .control-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:1px}
+  .control-head .name{font-size:11.5px;color:var(--ink-soft);letter-spacing:.02em}
+  .control-head em{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--ink);margin-left:3px}
+  .control-head .value{font-family:var(--mono);font-size:11px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .control-head .value b{font-weight:600}
+  .control-head .value small{font-family:var(--sans);font-size:8.5px;color:var(--muted);margin-left:2px}
+
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;display:block;width:100%;height:20px;margin:1px 0 0;
+    background:transparent;outline:none;--fill:50%;
+  }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:3px;border-radius:3px;
+    background:linear-gradient(to right,var(--red) 0 var(--fill),rgba(36,35,31,.14) var(--fill) 100%);
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:15px;height:15px;margin-top:-6px;border-radius:50%;
+    background:var(--paper-hi);border:2px solid var(--red);box-shadow:0 2px 5px rgba(60,40,25,.2);
+    transition:transform .12s;
+  }
+  input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
+  input[type=range]::-moz-range-track{height:3px;border-radius:3px;background:rgba(36,35,31,.14)}
+  input[type=range]::-moz-range-progress{height:3px;border-radius:3px;background:var(--red)}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:2px solid var(--red);border-radius:50%;background:var(--paper-hi)}
+  input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px rgba(201,68,47,.17)}
+
+  .jump-row{display:flex;align-items:center;gap:6px;margin-top:6px}
+  .jump-row button{border:1px solid rgba(36,35,31,.12);background:rgba(255,255,255,.18);border-radius:7px;padding:4px 8px;font-size:8.5px;color:var(--ink-soft)}
+  .jump-row button:hover{border-color:rgba(47,117,128,.35);color:var(--teal-deep)}
+  .jump-row .orbit-now{margin-left:auto;font-size:8.5px;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
+
+  .transport{display:grid;grid-template-columns:1.45fr 1fr;gap:7px;margin-top:12px}
+  .btn{
+    display:flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 11px;
+    border:1px solid rgba(36,35,31,.17);border-radius:10px;background:rgba(255,255,255,.25);
+    font-size:11px;font-weight:500;letter-spacing:.03em;transition:background .15s,border-color .15s,transform .1s;
+  }
+  .btn:hover{background:rgba(255,255,255,.55)}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--ink);border-color:var(--ink);color:#fbf8f1}
+  .btn.primary:hover{background:#13120f;border-color:#13120f}
+  .btn svg{width:13px;height:13px;display:block}
+  .btn.primary svg{width:11px;height:11px}
+
+  .speed-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-size:9.5px;color:var(--muted);letter-spacing:.08em}
+  .seg{display:flex;gap:2px;padding:2px;border:1px solid rgba(36,35,31,.1);border-radius:8px;background:rgba(255,255,255,.16)}
+  .seg button{border:0;background:none;padding:3px 7px;border-radius:6px;font-size:9px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .seg button:hover{color:var(--ink-soft)}
+  .seg button.on{background:rgba(201,68,47,.1);color:var(--red);font-weight:600}
+  .section-rule{height:1px;margin:11px 0 9px;background:linear-gradient(90deg,var(--line),var(--line-soft) 72%,transparent)}
+
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px 13px}
+  .stat{padding-left:9px;border-left:1px solid rgba(36,35,31,.1);min-width:0}
+  .stat:nth-child(odd){padding-left:0;border-left:0}
+  .stat .k{display:block;font-size:8px;letter-spacing:.04em;color:var(--muted);margin-bottom:1px;white-space:nowrap}
+  .stat .v{display:flex;align-items:baseline;gap:2px;font-family:var(--serif);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .stat .v b{font-size:16.5px;font-weight:600;line-height:1.15}
+  .stat .v small{font-family:var(--sans);font-size:8px;font-weight:400;color:var(--muted)}
+
+  .period-line{display:flex;justify-content:space-between;gap:10px;margin-top:9px;padding-top:7px;border-top:1px solid var(--line-soft);font-size:8.5px;color:var(--muted)}
+  .period-line b{font-family:var(--mono);font-weight:500;color:var(--ink-soft);font-size:9px}
+  .period-line .unit{font-size:7px;color:var(--muted);margin-left:1px}
+
+  .dv-card{margin-top:9px;padding:8px 9px 7px;border:1px solid rgba(47,117,128,.16);border-radius:10px;background:rgba(47,117,128,.045)}
+  .dv-card .dv-title{display:flex;align-items:center;justify-content:space-between;font-size:8px;letter-spacing:.1em;color:var(--teal-deep);font-weight:700;margin-bottom:5px}
+  .dv-card .dv-title span{font-weight:400;letter-spacing:.02em;color:var(--muted)}
+  .dv-values{display:flex;justify-content:space-between;gap:10px;font-size:9px;color:var(--ink-soft)}
+  .dv-values b{font-family:var(--mono);font-size:9.5px;font-weight:500;color:var(--ink)}
+
+  .panel-foot{margin-top:auto;padding-top:9px;border-top:1px solid var(--line-soft);font-size:8px;line-height:1.6;color:var(--muted);letter-spacing:.015em}
+
+  /* ---------------------------------------------------------- derivation */
+  .derivation{grid-column:1/-1;grid-row:3;display:grid;grid-template-columns:1fr 1.12fr .92fr;gap:14px;min-height:0}
+  .derivation-card{
+    min-width:0;min-height:0;overflow:hidden;padding:10px 11px 8px;
+    border:1px solid rgba(36,35,31,.1);border-radius:13px;background:rgba(255,255,255,.2);
+  }
+  .card-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .card-head .num{font-family:var(--mono);font-size:8px;color:var(--red);letter-spacing:.06em}
+  .card-head h3{margin:0;font-family:var(--serif);font-size:15px;font-weight:600;letter-spacing:.02em;line-height:1.2}
+  .frac{
+    display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+    vertical-align:middle;line-height:1.02;margin:0 .16em;color:inherit;
+    transform:translateY(-.04em);
+  }
+  .frac .num{display:block;padding:0 .2em .06em;border-bottom:1px solid currentColor;white-space:nowrap}
+  .frac .den{display:block;padding:.06em .2em 0;white-space:nowrap}
+  .formula{font-family:var(--serif);font-size:13.2px;line-height:2.1;color:var(--ink-soft);letter-spacing:.005em}
+  .formula b{font-weight:500;color:var(--ink);font-style:italic}
+  .formula .arrow{color:var(--red);font-family:var(--sans);font-style:normal;font-size:9px}
+  .laws .frac{font-size:10.4px}
+  .force-eq{display:flex;align-items:center;flex-wrap:wrap;gap:3px 5px;line-height:1.2}
+  .force-set{display:inline-flex;align-items:center;gap:3px;vertical-align:middle}
+  .brace{font-family:var(--serif);font-size:42px;line-height:.8;color:var(--ink-soft);transform:scaleY(1.25);transform-origin:center}
+  .force-lines{display:flex;flex-direction:column;gap:1px;font-family:var(--serif);font-size:12.3px;line-height:1.55;color:var(--ink-soft)}
+  .force-lines .fl{display:flex;align-items:center;gap:2px;white-space:nowrap}
+  .same-body{display:block;width:max-content;margin:5px auto 0;padding:2px 10px;border:1px solid rgba(201,68,47,.65);border-radius:999px;font-family:var(--sans);font-size:8px;letter-spacing:.06em;color:var(--red-deep)}
+  .same-note{display:block;margin:3px auto 0;text-align:center;font-family:var(--sans);font-size:7.5px;line-height:1.5;color:var(--muted)}
+  .derivation-card:nth-child(2) .formula{font-size:15px;line-height:2.18}
+  .derivation-card:nth-child(2) .same-body{font-size:9px}
+  .derivation-card:nth-child(2) .same-note{font-size:8px}
+  .conclusion{display:flex;flex-direction:column;justify-content:space-evenly;height:calc(100% - 24px);padding-top:2px;font-family:var(--serif);font-size:18px;line-height:1.45;color:var(--ink-soft);letter-spacing:.015em}
+  .conclusion sub{font-size:.66em}
+  .conclusion .note{margin-top:2px;font-family:var(--sans);font-size:8px;line-height:1.6;color:var(--muted);letter-spacing:.01em}
+  .values{margin-top:5px;font-size:8.5px;line-height:1.75;color:var(--muted)}
+  .values b{font-family:var(--mono);font-weight:500;color:var(--ink-soft);font-size:8.8px}
+  .values .row{display:flex;flex-wrap:wrap;gap:2px 10px}
+  .values .row span{white-space:nowrap}
+  .compare{margin-top:6px;padding-top:5px;border-top:1px solid var(--line-soft);font-size:9.3px;line-height:1.72;color:var(--ink-soft)}
+  .compare b{font-family:var(--serif);font-weight:600;color:var(--red-deep);font-style:italic}
+  .laws{margin:3px 0 0;padding-left:15px;font-size:10.2px;line-height:1.82;color:var(--ink-soft)}
+  .laws li{margin-bottom:2px}
+  .laws b{font-family:var(--serif);font-weight:600;font-style:italic;color:var(--ink)}
+  .const-line{margin-top:5px;font-size:8px;color:var(--muted);letter-spacing:.01em}
+
+  /* ---------------------------------------------------------- responsive */
+  @media (max-height:860px){
+    #app{grid-template-rows:auto minmax(0,1fr) 208px;gap:12px 18px;padding:18px 24px 18px 30px}
+    .panel{padding:15px 16px 13px}
+    .panel-head{margin-bottom:9px}
+    .panel h2{font-size:21px}
+    .control{margin-top:7px}
+    .transport{margin-top:9px}
+    .stats{gap:5px 12px}
+    .stat .v b{font-size:15px}
+    .dv-card{margin-top:7px;padding:6px 8px}
+    .panel-foot{padding-top:7px}
+    .derivation-card{padding:8px 9px 6px}
+    .card-head{margin-bottom:4px}
+    .formula{font-size:10.8px;line-height:2.02}
+    .values{font-size:8px;line-height:1.65}
+    .laws{font-size:8.9px;line-height:1.72}
+    .compare{font-size:8.4px;line-height:1.65}
+    .conclusion{font-size:16.5px}
+    .derivation-card:nth-child(2) .formula{font-size:12.3px;line-height:2.05}
+  }
+  @media (max-height:860px) and (min-width:901px){
+    body{overflow:auto}
+    #app{height:auto;min-height:100dvh;grid-template-rows:auto 560px 208px}
+    .panel{height:560px}
+  }
+  @media (max-width:1100px){
+    #app{grid-template-columns:minmax(0,1fr) 346px;padding:18px 20px 18px 24px;gap:12px 16px}
+    .formula-stamp{display:none}
+    h1{font-size:46px}
+  }
+  @media (max-width:900px){
+    body{overflow:auto}
+    #app{display:flex;flex-direction:column;height:auto;min-height:100dvh;padding:16px;gap:12px}
+    header{order:0}
+    .stage{order:1;width:100%;height:58vh;min-height:400px;flex:none}
+    .panel{order:2;width:100%;max-height:none;overflow:visible}
+    .derivation{order:3;width:100%;grid-template-columns:1fr;gap:10px;min-height:0}
+    .derivation-card{overflow:visible}
+    .formula{font-size:10px}
+    .values{font-size:9px}
+    .laws{font-size:9px}
+  }
+  @media (max-width:560px){
+    #app{padding:12px;gap:10px}
+    header p{font-size:11px}
+    h1{font-size:34px}
+    .title-line .en{display:none}
+    .stage{height:52vh;min-height:360px;border-radius:20px}
+    .stage-top{left:13px;right:13px;top:11px}
+    .stage-bottom{left:13px;right:13px;bottom:11px}
+    .legend{font-size:8px;gap:8px}
+    .hint{font-size:8.5px}
+    .panel{padding:16px 14px 14px;border-radius:20px}
+    .stat .v b{font-size:15px}
+    .orbit-tabs button{font-size:8px}
+  }
+  .render-mode .status i{animation:none;box-shadow:none}
+  @media (prefers-reduced-motion:reduce){
+    .status i{animation:none}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <div class="kicker"><a href="../index.html" title="返回 summer物理首页">← summer物理</a><span class="kicker-slash">/</span>MECHANICS · 天体运动</div>
+      <div class="title-line"><h1>天体轨道</h1><span class="en">KEPLERIAN ORBITS</span></div>
+      <p>圆轨道、转移椭圆与 A、B 切点：从万有引力和开普勒定律推导每个位置的 a、v、ω。</p>
+    </div>
+    <div class="formula-stamp"><span>NEWTON → KEPLER</span><b>a ∝ r⁻²</b></div>
+  </header>
+
+  <section class="stage" id="stage">
+    <canvas id="canvas"></canvas>
+    <div class="stage-top">
+      <div class="stage-tag"><span>03</span>开普勒轨道 / 变轨</div>
+      <div class="status" id="status"><i></i><b id="statusText">运行中</b></div>
+    </div>
+    <div class="stage-bottom">
+      <div class="legend">
+        <span><i class="v"></i>速度 v</span>
+        <span><i class="a"></i>加速度 a</span>
+      </div>
+      <div class="hint">拖动小球或位置滑块 · 按 A、B 对比</div>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="panel-head">
+      <div><div class="eyebrow">ORBIT CONTROL</div><h2>轨道参数</h2></div>
+      <span class="panel-note">实时模拟</span>
+    </div>
+
+    <div class="orbit-tabs" id="orbitTabs">
+      <button type="button" data-orbit="I">I · 圆轨道</button>
+      <button type="button" data-orbit="II" class="on">II · 转移椭圆</button>
+      <button type="button" data-orbit="III">III · 圆轨道</button>
+    </div>
+
+    <label class="control">
+      <span class="control-head"><span class="name">近地点半径<em>r<sub>A</sub></em></span><span class="value"><b id="rAVal">10 000</b><small>km</small></span></span>
+      <input id="rARange" type="range" min="7000" max="14000" step="100" value="10000" aria-label="近地点半径">
+    </label>
+    <label class="control">
+      <span class="control-head"><span class="name">远地点半径<em>r<sub>B</sub></em></span><span class="value"><b id="rBVal">30 000</b><small>km</small></span></span>
+      <input id="rBRange" type="range" min="20000" max="45000" step="500" value="30000" aria-label="远地点半径">
+    </label>
+
+    <label class="control">
+      <span class="control-head"><span class="name">轨道位置</span><span class="value"><b id="phaseVal">0%</b></span></span>
+      <input id="phaseRange" type="range" min="0" max="100" step="0.5" value="0" aria-label="轨道位置">
+    </label>
+    <div class="jump-row">
+      <button type="button" data-pos="A">A 点</button>
+      <button type="button" data-pos="B">B 点</button>
+      <span class="orbit-now" id="currentOrbit">II · 转移椭圆</span>
+    </div>
+
+    <div class="transport">
+      <button id="playBtn" class="btn primary" type="button">
+        <span id="playIcon"></span><span id="playText">暂停</span>
+      </button>
+      <button id="resetBtn" class="btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/></svg>
+        <span>复位</span>
+      </button>
+    </div>
+
+    <div class="speed-row">
+      <span>演示速度</span>
+      <div class="seg" id="speedSeg">
+        <button type="button" data-speed="0.5">0.5×</button>
+        <button type="button" data-speed="1" class="on">1×</button>
+        <button type="button" data-speed="1.5">1.5×</button>
+      </div>
+    </div>
+
+    <div class="section-rule"></div>
+
+    <div class="stats">
+      <div class="stat"><span class="k">半径 r</span><span class="v"><b id="radiusVal">10 000</b><small>km</small></span></div>
+      <div class="stat"><span class="k">速度 v</span><span class="v"><b id="speedVal">7.73</b><small>km/s</small></span></div>
+      <div class="stat"><span class="k">加速度 a</span><span class="v"><b id="accelVal">3.986</b><small>m/s²</small></span></div>
+      <div class="stat"><span class="k">角速度 ω</span><span class="v"><b id="omegaVal">7.73e-4</b><small>rad/s</small></span></div>
+    </div>
+
+    <div class="period-line">
+      <span>周期 T <b id="periodVal">7.82 h</b></span>
+      <span>角动量 h <b id="hVal">7.73e10</b><span class="unit">m²/s</span></span>
+    </div>
+
+    <div class="dv-card">
+      <div class="dv-title">圆化速度增量 <span>在 A / B 变轨</span></div>
+      <div class="dv-values">
+        <span>Δv<sub>A</sub> <b id="dvA">1.42</b> km/s</span>
+        <span>Δv<sub>B</sub> <b id="dvB">1.07</b> km/s</span>
+      </div>
+    </div>
+
+    <div class="panel-foot">
+      取 GM = 3.986×10¹⁴ m³/s²。A、B 为转移椭圆与两个圆轨道的切点；模型只画轨道，不模拟点火过程。动画按转移周期缩放，T 为真实周期。
+    </div>
+  </aside>
+
+  <section class="derivation">
+    <article class="derivation-card">
+      <div class="card-head"><span class="num">01</span><h3>万有引力与牛二定律</h3></div>
+      <div class="formula">
+        万有引力定律 + 牛二定律：F<sub>万</sub> = G <span class="frac"><span class="num">Mm</span><span class="den">r²</span></span> = ma
+      </div>
+      <div class="formula">
+        万有引力 ↔ 圆轨道：F<sub>万</sub> = G <span class="frac"><span class="num">Mm</span><span class="den">r²</span></span> = F<sub>向</sub> =
+        <span class="force-set">
+          <span class="brace">{</span>
+          <span class="force-lines">
+            <span class="fl">m <span class="frac"><span class="num">v²</span><span class="den">r</span></span></span>
+            <span class="fl">m ω² r</span>
+            <span class="fl">m <span class="frac"><span class="num">2π</span><span class="den">T</span></span>² r</span>
+          </span>
+        </span>
+      </div>
+      <div class="formula">
+        v = √<span class="frac"><span class="num">GM</span><span class="den">r</span></span>
+        　ω = √<span class="frac"><span class="num">GM</span><span class="den">r³</span></span><br>
+        T = 2π√<span class="frac"><span class="num">r³</span><span class="den">GM</span></span>
+      </div>
+    </article>
+
+    <article class="derivation-card">
+      <div class="card-head"><span class="num">02</span><h3>开普勒第二、第三定律</h3></div>
+      <div class="formula">
+        开普勒第二定律 <span class="arrow">→</span> 面积定律：
+        <span class="frac"><span class="num">r<sub>A</sub></span><span class="den">r<sub>B</sub></span></span>
+        =
+        <span class="frac"><span class="num">v<sub>B</sub></span><span class="den">v<sub>A</sub></span></span>
+      </div>
+      <div class="formula">
+        开普勒第三定律：
+        <span class="frac"><span class="num">a<sub>轨</sub>³</span><span class="den">T<sub>AB</sub>²</span></span>
+        =
+        <span class="frac"><span class="num">r<sub>1</sub>³</span><span class="den">T<sub>1</sub>²</span></span>
+        =
+        <span class="frac"><span class="num">r<sub>3</sub>³</span><span class="den">T<sub>3</sub>²</span></span>
+        <span class="same-body">同一中心天体</span>
+      </div>
+      <div class="same-note">a<sub>轨</sub> 为转移椭圆半长轴，T<sub>AB</sub> 为转移周期</div>
+    </article>
+
+    <article class="derivation-card">
+      <div class="card-head"><span class="num">03</span><h3>结论</h3></div>
+      <div class="conclusion">
+        <div>a<sub>1</sub> = a<sub>A</sub> &gt; a<sub>B</sub> = a<sub>3</sub></div>
+        <div>v<sub>A</sub> &gt; v<sub>1</sub> &gt; v<sub>3</sub> &gt; v<sub>B</sub></div>
+        <div>ω<sub>A</sub> &gt; ω<sub>1</sub> &gt; ω<sub>3</sub> &gt; ω<sub>B</sub></div>
+        <div>T<sub>1</sub> &lt; T<sub>AB</sub> &lt; T<sub>3</sub>
+          <span class="note">T<sub>AB</sub> 为转移周期</span>
+        </div>
+      </div>
+    </article>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = (s) => document.querySelector(s);
+  const TAU = Math.PI * 2;
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const MU = 3.986004418e14;
+  const R_EARTH = 6.371e6;
+
+  const stage = $("#stage");
+  const canvas = $("#canvas");
+  const ctx = canvas.getContext("2d");
+
+  const state = {
+    rA: 10e6,
+    rB: 30e6,
+    orbit: "II",
+    phase: 0,
+    animTime: 0,
+    playing: true,
+    speed: 1,
+    renderMode: false,
+    dragging: false,
+  };
+
+  const geom = {
+    w: 0, h: 0, dpr: 1,
+    cx: 0, cy: 0, scale: 1, earthR: 30, unit: 1,
+  };
+
+  let bgCanvas = null;
+  let lastFrame = performance.now();
+  let lastHud = 0;
+
+  const lblOrbit = { I: "I · 圆轨道", II: "II · 转移椭圆", III: "III · 圆轨道" };
+
+  function transferElements() {
+    const a = (state.rA + state.rB) / 2;
+    const e = (state.rB - state.rA) / (state.rA + state.rB);
+    const p = a * (1 - e * e);
+    const h = Math.sqrt(MU * p);
+    const T = TAU * Math.sqrt((a * a * a) / MU);
+    const vI = Math.sqrt(MU / state.rA);
+    const vIII = Math.sqrt(MU / state.rB);
+    const vA = h / state.rA;
+    const vB = h / state.rB;
+    const wI = vI / state.rA;
+    const wIII = vIII / state.rB;
+    const wA = vA / state.rA;
+    const wB = vB / state.rB;
+    const aA = MU / (state.rA * state.rA);
+    const aB = MU / (state.rB * state.rB);
+    return {
+      a, e, p, h, T, vI, vIII, vA, vB, wI, wIII, wA, wB,
+      aA, aB, T1: TAU * Math.sqrt((state.rA ** 3) / MU),
+      T3: TAU * Math.sqrt((state.rB ** 3) / MU),
+      dvA: vA - vI, dvB: vIII - vB,
+    };
+  }
+
+  function currentT() {
+    if (state.orbit === "I") return TAU * Math.sqrt((state.rA ** 3) / MU);
+    if (state.orbit === "III") return TAU * Math.sqrt((state.rB ** 3) / MU);
+    return transferElements().T;
+  }
+
+  function solveKepler(M, e) {
+    let E = M;
+    for (let i = 0; i < 8; i++) {
+      E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+    }
+    return E;
+  }
+
+  function positionAt(orbit, phase) {
+    const tr = transferElements();
+    let x = 0, y = 0, r = 0, v = 0, omega = 0, T = 0, tx = 1, ty = 0;
+
+    if (orbit === "I") {
+      const phi = TAU * phase;
+      r = state.rA;
+      x = -r * Math.cos(phi);
+      y = -r * Math.sin(phi);
+      v = tr.vI;
+      omega = tr.wI;
+      T = tr.T1;
+      tx = Math.sin(phi);
+      ty = -Math.cos(phi);
+    } else if (orbit === "III") {
+      const phi = TAU * phase;
+      r = state.rB;
+      x = r * Math.cos(phi);
+      y = r * Math.sin(phi);
+      v = tr.vIII;
+      omega = tr.wIII;
+      T = tr.T3;
+      tx = -Math.sin(phi);
+      ty = Math.cos(phi);
+    } else {
+      const e = tr.e, a = tr.a, p = tr.p;
+      const M = TAU * phase;
+      const E = solveKepler(M, e);
+      const nu = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
+      r = p / (1 + e * Math.cos(nu));
+      x = -r * Math.cos(nu);
+      y = -r * Math.sin(nu);
+      v = Math.sqrt(MU * (2 / r - 1 / a));
+      omega = tr.h / (r * r);
+      T = tr.T;
+      const dr = r * e * Math.sin(nu) / (1 + e * Math.cos(nu));
+      const dx = -dr * Math.cos(nu) + r * Math.sin(nu);
+      const dy = -dr * Math.sin(nu) - r * Math.cos(nu);
+      const len = Math.hypot(dx, dy) || 1;
+      tx = dx / len;
+      ty = dy / len;
+    }
+
+    return {
+      x, y, r, v, omega, T, tx, ty,
+      a: MU / (r * r),
+      h: orbit === "II" ? tr.h : r * v,
+    };
+  }
+
+  // ------------------------------------------------------------- geometry
+  function resizeStage() {
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(1, rect.width);
+    const h = Math.max(1, rect.height);
+    geom.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    geom.w = w;
+    geom.h = h;
+    canvas.width = Math.round(w * geom.dpr);
+    canvas.height = Math.round(h * geom.dpr);
+    ctx.setTransform(geom.dpr, 0, 0, geom.dpr, 0, 0);
+    geom.cx = w * 0.5;
+    geom.cy = h * 0.52;
+    geom.scale = Math.min((w * 0.42) / state.rB, (h * 0.40) / state.rB);
+    geom.earthR = Math.max(14, R_EARTH * geom.scale);
+    geom.unit = clamp(Math.min(w, h) / 650, 0.82, 1.12);
+    buildBackground();
+  }
+
+  function buildBackground() {
+    const w = geom.w, h = geom.h, dpr = geom.dpr;
+    const bg = document.createElement("canvas");
+    bg.width = Math.round(w * dpr);
+    bg.height = Math.round(h * dpr);
+    const b = bg.getContext("2d");
+    b.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const grad = b.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, "#fcf9f2");
+    grad.addColorStop(0.58, "#faf6ed");
+    grad.addColorStop(1, "#f4eee2");
+    b.fillStyle = grad;
+    b.fillRect(0, 0, w, h);
+
+    const glow = b.createRadialGradient(geom.cx, geom.cy, 8, geom.cx, geom.cy, Math.max(w, h) * 0.65);
+    glow.addColorStop(0, "rgba(47,117,128,.045)");
+    glow.addColorStop(0.6, "rgba(47,117,128,.01)");
+    glow.addColorStop(1, "rgba(47,117,128,0)");
+    b.fillStyle = glow;
+    b.fillRect(0, 0, w, h);
+
+    const step = w < 620 ? 23 : 29;
+    b.fillStyle = "rgba(53,43,29,.10)";
+    for (let y = step * 0.7; y < h; y += step) {
+      for (let x = step * 0.6; x < w; x += step) {
+        b.beginPath();
+        b.arc(x, y, 0.85, 0, TAU);
+        b.fill();
+      }
+    }
+
+    const vig = b.createRadialGradient(w * 0.5, h * 0.48, Math.min(w, h) * 0.35, w * 0.5, h * 0.48, Math.max(w, h) * 0.8);
+    vig.addColorStop(0, "rgba(70,52,30,0)");
+    vig.addColorStop(1, "rgba(70,52,30,.05)");
+    b.fillStyle = vig;
+    b.fillRect(0, 0, w, h);
+    bgCanvas = bg;
+  }
+
+  const sx = (x) => geom.cx + x * geom.scale;
+  const sy = (y) => geom.cy - y * geom.scale;
+
+  // ------------------------------------------------------------- drawing
+  function haloText(text, x, y, color, font, align = "center", baseline = "middle") {
+    ctx.save();
+    ctx.font = font;
+    ctx.textAlign = align;
+    ctx.textBaseline = baseline;
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "rgba(250,247,239,.95)";
+    ctx.lineWidth = 5;
+    ctx.strokeText(text, x, y);
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  function arrow(x1, y1, x2, y2, color, width, label) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.hypot(dx, dy);
+    if (len < 4) return;
+    const ux = dx / len, uy = dy / len;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2 - ux * 5, y2 - uy * 5);
+    ctx.stroke();
+    const head = 9;
+    const wing = 0.42;
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - Math.cos(wing) * head * ux + Math.sin(wing) * head * uy,
+               y2 - Math.cos(wing) * head * uy - Math.sin(wing) * head * ux);
+    ctx.lineTo(x2 - Math.cos(wing) * head * ux - Math.sin(wing) * head * uy,
+               y2 - Math.cos(wing) * head * uy + Math.sin(wing) * head * ux);
+    ctx.closePath();
+    ctx.fill();
+    if (label) {
+      haloText(label, x2 + ux * 13, y2 + uy * 13 - 2, color,
+        `italic 600 ${12 * geom.unit}px "Cambria Math","Noto Serif SC",Georgia,serif`);
+    }
+    ctx.restore();
+  }
+
+  function traceOrbit(orbit) {
+    const s = geom.scale;
+    if (orbit === "I") {
+      ctx.beginPath();
+      ctx.arc(geom.cx, geom.cy, state.rA * s, 0, TAU);
+    } else if (orbit === "III") {
+      ctx.beginPath();
+      ctx.arc(geom.cx, geom.cy, state.rB * s, 0, TAU);
+    } else {
+      const c = (state.rB - state.rA) / 2 * s;
+      const aPx = (state.rA + state.rB) / 2 * s;
+      const bPx = Math.sqrt(state.rA * state.rB) * s;
+      ctx.beginPath();
+      ctx.ellipse(geom.cx + c, geom.cy, aPx, bPx, 0, 0, TAU);
+    }
+  }
+
+  function drawOrbits() {
+    const selected = state.orbit;
+    for (const o of ["I", "II", "III"]) {
+      traceOrbit(o);
+      ctx.setLineDash([7, 8]);
+      ctx.lineWidth = o === selected ? 2.1 : 1.1;
+      ctx.strokeStyle = o === selected ? "rgba(31,95,104,.86)" : "rgba(47,117,128,.33)";
+      if (o === selected) {
+        ctx.save();
+        ctx.shadowColor = "rgba(47,117,128,.22)";
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        ctx.stroke();
+      }
+    }
+    ctx.setLineDash([]);
+
+    const s = geom.scale;
+    const lab = (text, x, y, color) => haloText(text, x, y, color,
+      `italic 500 ${15 * geom.unit}px "Cambria Math","Noto Serif SC",Georgia,serif`);
+    lab("I", geom.cx + state.rA * s * 0.72, geom.cy - state.rA * s * 0.68, "rgba(47,117,128,.82)");
+    lab("III", geom.cx + state.rB * s * 0.70, geom.cy - state.rB * s * 0.70, "rgba(47,117,128,.82)");
+    const c = (state.rB - state.rA) / 2;
+    const b = Math.sqrt(state.rA * state.rB);
+    lab("II", geom.cx + c * s, geom.cy + b * s + 16, "rgba(47,117,128,.82)");
+  }
+
+  function drawEarth() {
+    const r = geom.earthR;
+    const g = ctx.createRadialGradient(geom.cx - r * 0.35, geom.cy - r * 0.4, r * 0.1, geom.cx, geom.cy, r);
+    g.addColorStop(0, "#f0f7f5");
+    g.addColorStop(0.6, "#d6e7e3");
+    g.addColorStop(1, "#bcd6d2");
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(geom.cx, geom.cy, r, 0, TAU);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(36,35,31,.75)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(47,117,128,.2)";
+    ctx.lineWidth = 1;
+    for (const k of [-0.45, 0, 0.45]) {
+      ctx.beginPath();
+      ctx.ellipse(geom.cx, geom.cy + r * k, r * Math.sqrt(1 - k * k), r * 0.16, 0, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.ellipse(geom.cx, geom.cy, r * 0.34, r, 0, 0, TAU);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawEarthLabel() {
+    if (geom.earthR < 21) return;
+    const fs = clamp(geom.earthR * 0.23, 9, 13);
+    const ly = geom.cy - geom.earthR * 0.52;
+    const font = `600 ${fs}px "Noto Serif SC","Songti SC",serif`;
+    ctx.save();
+    ctx.font = font;
+    const w = ctx.measureText("地球").width;
+    ctx.fillStyle = "rgba(223,236,233,.9)";
+    ctx.fillRect(geom.cx - w / 2 - 3, ly - fs * 0.68, w + 6, fs * 1.28);
+    ctx.restore();
+    haloText("地球", geom.cx, ly, "rgba(36,35,31,.78)", font);
+  }
+
+  function drawAB() {
+    const A = { x: sx(-state.rA), y: sy(0) };
+    const B = { x: sx(state.rB), y: sy(0) };
+    for (const [p, name, align] of [[A, "A", "right"], [B, "B", "left"]]) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 8, 0, TAU);
+      ctx.fillStyle = "rgba(201,68,47,.06)";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3.2, 0, TAU);
+      ctx.fillStyle = "#24231f";
+      ctx.fill();
+      ctx.restore();
+      haloText(name, p.x + (align === "right" ? -14 : 14), p.y - 15, "rgba(36,35,31,.85)",
+        `italic 500 ${16 * geom.unit}px "Cambria Math","Noto Serif SC",Georgia,serif`, align);
+    }
+  }
+
+  function drawSatellite() {
+    const p = positionAt(state.orbit, state.phase);
+    const x = sx(p.x), y = sy(p.y);
+
+    const tx = p.tx, ty = -p.ty;
+    const nx = -p.x / p.r, ny = p.y / p.r; // toward Earth in canvas coords
+    const vLen = clamp(p.v / 1000 * 12, 18, 104);
+    const start = 8;
+    // a = GM/r²：越靠近中心天体，加速度箭头越长。
+    const aLen = clamp(p.a * 24, 5, 120);
+    const ax1 = x + nx * start;
+    const ay1 = y + ny * start;
+    const ax2 = x + nx * (start + aLen);
+    const ay2 = y + ny * (start + aLen);
+
+    arrow(x + tx * start, y + ty * start, x + tx * (start + vLen), y + ty * (start + vLen),
+      "#b78310", 2.1, "v");
+
+    // 浅色描边让加速度箭头越过地球表面时仍然清楚。
+    ctx.save();
+    ctx.strokeStyle = "rgba(250,247,239,.9)";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(ax1, ay1);
+    ctx.lineTo(ax2, ay2);
+    ctx.stroke();
+    ctx.restore();
+
+    arrow(ax1, ay1, ax2, ay2, "#c9442f", 2.1, null);
+    const lx = x + nx * (start + 12) - ny * 12;
+    const ly = y + ny * (start + 12) + nx * 12;
+    haloText("a", lx, ly, "#a72f1e",
+      `italic 600 ${12 * geom.unit}px "Cambria Math","Noto Serif SC",Georgia,serif`);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, 6.3, 0, TAU);
+    ctx.fillStyle = "rgba(201,68,47,.18)";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, y, 4.4, 0, TAU);
+    ctx.fillStyle = "#c9442f";
+    ctx.fill();
+    ctx.strokeStyle = "#2b1d18";
+    ctx.lineWidth = 1.1;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x - 1.4, y - 1.5, 1.2, 0, TAU);
+    ctx.fillStyle = "rgba(255,245,232,.72)";
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function draw() {
+    if (!bgCanvas) return;
+    ctx.clearRect(0, 0, geom.w, geom.h);
+    ctx.drawImage(bgCanvas, 0, 0, geom.w, geom.h);
+    drawOrbits();
+    drawEarth();
+    drawAB();
+    drawSatellite();
+    drawEarthLabel();
+  }
+
+  // ------------------------------------------------------------- HUD
+  function fmtKm(m) { return Math.round(m / 1000).toLocaleString("en-US"); }
+  function fmtV(v) { return (v / 1000).toFixed(2); }
+  function fmtA(a) { return a.toFixed(3); }
+  function fmtW(w) { return w.toExponential(2); }
+  function fmtT(s) { return (s / 3600).toFixed(2); }
+  function fmtH(h) { return h.toExponential(2); }
+
+  function updateDerived() {
+    const tr = transferElements();
+    $("#dvA").textContent = (tr.dvA / 1000).toFixed(2);
+    $("#dvB").textContent = (tr.dvB / 1000).toFixed(2);
+    $("#rAVal").textContent = fmtKm(state.rA);
+    $("#rBVal").textContent = fmtKm(state.rB);
+    setFill($("#rARange"), (state.rA / 1000 - 7000) / 7000);
+    setFill($("#rBRange"), (state.rB / 1000 - 20000) / 25000);
+  }
+
+  function updateHud(force = false) {
+    const now = performance.now();
+    if (!force && now - lastHud < 55) return;
+    lastHud = now;
+    const p = positionAt(state.orbit, state.phase);
+    $("#radiusVal").textContent = fmtKm(p.r);
+    $("#speedVal").textContent = fmtV(p.v);
+    $("#accelVal").textContent = fmtA(p.a);
+    $("#omegaVal").textContent = fmtW(p.omega);
+    $("#periodVal").textContent = `${fmtT(p.T)} h`;
+    $("#hVal").textContent = fmtH(p.h);
+    $("#currentOrbit").textContent = lblOrbit[state.orbit];
+    $("#phaseVal").textContent = `${(state.phase * 100).toFixed(1)}%`;
+    $("#phaseRange").value = String((state.phase * 100).toFixed(1));
+    setFill($("#phaseRange"), state.phase);
+    updateStatus();
+  }
+
+  function updateStatus() {
+    const text = $("#statusText");
+    const box = $("#status");
+    if (state.playing) {
+      text.textContent = "运行中";
+      box.classList.remove("paused");
+    } else {
+      text.textContent = "已暂停";
+      box.classList.add("paused");
+    }
+  }
+
+  function setFill(el, frac) {
+    el.style.setProperty("--fill", `${clamp(frac, 0, 1) * 100}%`);
+  }
+
+  const playIcon = $("#playIcon");
+  const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="5" width="3.6" height="14" rx="1"/><rect x="13.9" y="5" width="3.6" height="14" rx="1"/></svg>';
+  const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.4v13.2c0 .8.9 1.3 1.6.9l10-6.6c.6-.4.6-1.4 0-1.8l-10-6.6c-.7-.4-1.6.1-1.6.9z"/></svg>';
+
+  function updateTransport() {
+    playIcon.innerHTML = state.playing ? ICON_PAUSE : ICON_PLAY;
+    $("#playText").textContent = state.playing ? "暂停" : "播放";
+    updateStatus();
+  }
+
+  function setOrbit(o) {
+    state.orbit = o;
+    state.animTime = 0;
+    state.phase = 0;
+    for (const b of $("#orbitTabs").querySelectorAll("button")) {
+      b.classList.toggle("on", b.dataset.orbit === o);
+    }
+    updateHud(true);
+    draw();
+  }
+
+  function jumpTo(which) {
+    state.orbit = "II";
+    state.playing = false;
+    state.phase = which === "A" ? 0 : 0.5;
+    state.animTime = state.phase * transferElements().T;
+    for (const b of $("#orbitTabs").querySelectorAll("button")) b.classList.toggle("on", b.dataset.orbit === "II");
+    updateTransport();
+    updateHud(true);
+    draw();
+  }
+
+  function reset() {
+    state.orbit = "II";
+    state.phase = 0;
+    state.animTime = 0;
+    for (const b of $("#orbitTabs").querySelectorAll("button")) b.classList.toggle("on", b.dataset.orbit === "II");
+    updateTransport();
+    updateHud(true);
+    draw();
+  }
+
+  // ------------------------------------------------------------- drag the satellite
+  function satellitePoint() {
+    const p = positionAt(state.orbit, state.phase);
+    return { x: sx(p.x), y: sy(p.y), p };
+  }
+
+  function nearSatellite(e) {
+    const rect = canvas.getBoundingClientRect();
+    const p = satellitePoint();
+    const dx = e.clientX - rect.left - p.x;
+    const dy = e.clientY - rect.top - p.y;
+    return Math.hypot(dx, dy) <= 22 * geom.unit;
+  }
+
+  function phaseFromPoint(e) {
+    const rect = canvas.getBoundingClientRect();
+    const dx = e.clientX - rect.left - geom.cx;
+    const dy = e.clientY - rect.top - geom.cy;
+    if (Math.hypot(dx, dy) < 4) return null;
+
+    let phase;
+    if (state.orbit === "I") {
+      phase = Math.atan2(dy, -dx) / TAU;
+    } else if (state.orbit === "III") {
+      phase = Math.atan2(-dy, dx) / TAU;
+    } else {
+      const nu = Math.atan2(dy, -dx);
+      const e = transferElements().e;
+      const E = 2 * Math.atan2(
+        Math.sqrt(1 - e) * Math.sin(nu / 2),
+        Math.sqrt(1 + e) * Math.cos(nu / 2)
+      );
+      const M = E - e * Math.sin(E);
+      phase = M / TAU;
+    }
+    return ((phase % 1) + 1) % 1;
+  }
+
+  canvas.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (!nearSatellite(e)) return;
+    e.preventDefault();
+    state.dragging = true;
+    state.playing = false;
+    state.animTime = state.phase * currentT();
+    canvas.setPointerCapture?.(e.pointerId);
+    canvas.style.cursor = "grabbing";
+    updateTransport();
+    updateHud(true);
+    draw();
+  });
+
+  canvas.addEventListener("pointermove", (e) => {
+    if (!state.dragging) {
+      canvas.style.cursor = nearSatellite(e) ? "grab" : "default";
+      return;
+    }
+    e.preventDefault();
+    const next = phaseFromPoint(e);
+    if (next === null) return;
+    state.phase = next;
+    state.animTime = next * currentT();
+    updateHud(true);
+    draw();
+  });
+
+  function endDrag(e) {
+    if (!state.dragging) return;
+    state.dragging = false;
+    if (canvas.hasPointerCapture?.(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    canvas.style.cursor = nearSatellite(e) ? "grab" : "default";
+    updateHud(true);
+    draw();
+  }
+
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+  canvas.addEventListener("pointerleave", () => {
+    if (!state.dragging) canvas.style.cursor = "default";
+  });
+  canvas.addEventListener("lostpointercapture", () => {
+    if (state.dragging) {
+      state.dragging = false;
+      canvas.style.cursor = "default";
+      updateHud(true);
+      draw();
+    }
+  });
+
+  // ------------------------------------------------------------- interactions
+  $("#orbitTabs").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-orbit]");
+    if (!b) return;
+    state.animTime = 0;
+    state.phase = 0;
+    setOrbit(b.dataset.orbit);
+  });
+
+  $("#rARange").addEventListener("input", (e) => {
+    state.rA = Number(e.target.value) * 1000;
+    state.animTime = 0;
+    state.phase = 0;
+    updateDerived();
+    updateHud(true);
+    resizeStage();
+    draw();
+  });
+  $("#rBRange").addEventListener("input", (e) => {
+    state.rB = Number(e.target.value) * 1000;
+    state.animTime = 0;
+    state.phase = 0;
+    updateDerived();
+    updateHud(true);
+    resizeStage();
+    draw();
+  });
+
+  $("#phaseRange").addEventListener("input", (e) => {
+    state.playing = false;
+    state.phase = clamp(Number(e.target.value) / 100, 0, 1);
+    state.animTime = state.phase * currentT();
+    updateTransport();
+    updateHud(true);
+    draw();
+  });
+
+  document.querySelectorAll("[data-pos]").forEach((b) => {
+    b.addEventListener("click", () => jumpTo(b.dataset.pos));
+  });
+
+  $("#playBtn").addEventListener("click", () => {
+    state.playing = !state.playing;
+    updateTransport();
+    updateHud(true);
+  });
+  $("#resetBtn").addEventListener("click", reset);
+
+  $("#speedSeg").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-speed]");
+    if (!b) return;
+    state.speed = Number(b.dataset.speed);
+    for (const x of $("#speedSeg").querySelectorAll("button")) x.classList.toggle("on", x === b);
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.target.closest("input,button")) return;
+    if (e.code === "Space") {
+      e.preventDefault();
+      state.playing = !state.playing;
+      updateTransport();
+      updateHud(true);
+    } else if (e.key === "r" || e.key === "R") {
+      e.preventDefault();
+      reset();
+    }
+  });
+
+  window.__orbit = {
+    get state() {
+      return {
+        rA: state.rA, rB: state.rB, orbit: state.orbit, phase: state.phase,
+        playing: state.playing, speed: state.speed,
+      };
+    },
+    setOrbit,
+    jumpTo,
+    setPhase(p) {
+      state.playing = false;
+      state.phase = clamp(Number(p), 0, 1);
+      state.animTime = state.phase * currentT();
+      updateTransport();
+      updateHud(true);
+      draw();
+    },
+    screenPoint() {
+      const p = positionAt(state.orbit, state.phase);
+      const rect = canvas.getBoundingClientRect();
+      return { x: rect.left + sx(p.x), y: rect.top + sy(p.y) };
+    },
+    renderAt(p) {
+      state.renderMode = true;
+      document.body.classList.add("render-mode");
+      state.orbit = "II";
+      state.playing = true;
+      state.phase = ((Number(p) % 1) + 1) % 1;
+      state.animTime = state.phase * currentT();
+      for (const b of $("#orbitTabs").querySelectorAll("button")) {
+        b.classList.toggle("on", b.dataset.orbit === "II");
+      }
+      updateTransport();
+      updateHud(true);
+      draw();
+    },
+  };
+
+  // ------------------------------------------------------------- loop
+  function frame(now) {
+    let dt = (now - lastFrame) / 1000;
+    lastFrame = now;
+    if (!Number.isFinite(dt) || dt < 0) dt = 0;
+    dt = Math.min(dt, 0.06);
+
+    if (state.playing && !state.renderMode) {
+      const tr = transferElements();
+      const timeScale = tr.T / 8;
+      state.animTime += dt * state.speed * timeScale;
+      const T = currentT();
+      state.phase = ((state.animTime / T) % 1 + 1) % 1;
+    }
+
+    draw();
+    updateHud();
+    requestAnimationFrame(frame);
+  }
+
+  // ------------------------------------------------------------- boot
+  const ro = new ResizeObserver(() => {
+    resizeStage();
+    draw();
+  });
+  ro.observe(stage);
+
+  updateDerived();
+  updateTransport();
+  updateHud(true);
+  resizeStage();
+  draw();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

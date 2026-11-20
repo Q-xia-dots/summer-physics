@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>动量守恒 · summer物理</title>
+<meta name="description" content="两球一维碰撞交互模型：弹性碰撞、非弹性碰撞、完全非弹性碰撞，实时比较碰撞前后动量与动能。">
+<meta name="theme-color" content="#f3eee4">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --paper:#f3eee4;
+    --paper-hi:#fbf8f1;
+    --ink:#24231f;
+    --ink-soft:#59554b;
+    --muted:#8b8375;
+    --red:#c9442f;
+    --red-deep:#a72f1e;
+    --gold:#b78310;
+    --gold-deep:#93670a;
+    --teal:#2f7580;
+    --teal-deep:#1f5f68;
+    --line:rgba(36,35,31,.13);
+    --line-soft:rgba(36,35,31,.075);
+    --serif:"Noto Serif SC","Songti SC","STSong",Georgia,serif;
+    --sans:"Noto Sans SC","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+    --mono:"Cascadia Mono","SFMono-Regular",Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;overflow:hidden;color:var(--ink);font-family:var(--sans);
+    background:
+      radial-gradient(1100px 680px at 8% -8%,rgba(255,255,255,.72),transparent 64%),
+      radial-gradient(1000px 760px at 98% 104%,rgba(188,158,108,.18),transparent 62%),
+      var(--paper);
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(rgba(58,48,34,.13) .55px,transparent .7px);
+    background-size:3px 3px;opacity:.22;mix-blend-mode:multiply;
+  }
+  button,input{font:inherit;color:inherit}
+  button{cursor:pointer}
+  #app{
+    position:relative;z-index:1;height:100dvh;max-width:1780px;margin:0 auto;
+    display:grid;grid-template-columns:minmax(0,1fr) 380px;
+    grid-template-rows:auto minmax(0,1fr) 194px;
+    gap:14px 22px;padding:24px 30px 24px 38px;
+  }
+
+  header{grid-column:1/-1;grid-row:1;display:flex;align-items:flex-end;justify-content:space-between;gap:26px;min-width:0;padding:1px 2px 0}
+  .kicker{display:flex;align-items:center;gap:10px;color:var(--red);font-size:9.5px;font-weight:700;letter-spacing:.26em;text-transform:uppercase}
+  .kicker::before{content:"";width:28px;height:1px;background:var(--red)}
+  .kicker a{color:var(--red);text-decoration:none;text-transform:none;letter-spacing:.08em;border-bottom:1px solid transparent;transition:border-color .18s,color .18s}
+  .kicker a:hover{color:var(--red-deep);border-color:rgba(201,68,47,.45)}
+  .kicker .kicker-slash{color:var(--muted);opacity:.55;font-weight:400;letter-spacing:0;margin:0 1px}
+  .title-line{display:flex;align-items:baseline;gap:16px;margin:6px 0 4px}
+  h1{margin:0;font-family:var(--serif);font-size:clamp(38px,4.3vw,56px);line-height:1.06;font-weight:700;letter-spacing:.04em}
+  .title-line .en{font-size:9px;letter-spacing:.2em;color:var(--muted);font-weight:600;white-space:nowrap}
+  header p{margin:0;font-size:12.5px;line-height:1.65;color:var(--ink-soft);letter-spacing:.012em}
+  .formula-stamp{display:flex;flex-direction:column;align-items:flex-end;gap:3px;padding-left:22px;border-left:1px solid var(--line);white-space:nowrap;margin-bottom:3px}
+  .formula-stamp span{font-size:8.5px;letter-spacing:.17em;color:var(--muted);font-weight:600}
+  .formula-stamp b{font-family:var(--serif);font-style:italic;font-size:18px;font-weight:500;letter-spacing:.01em}
+
+  .stage{
+    grid-column:1;grid-row:2;position:relative;min-width:0;min-height:0;overflow:hidden;
+    border:1px solid rgba(36,35,31,.15);border-radius:25px;background:var(--paper-hi);
+    box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 26px 60px -48px rgba(56,40,22,.7);
+  }
+  .stage::after{content:"";position:absolute;inset:8px;border-radius:18px;border:1px solid rgba(36,35,31,.045);pointer-events:none}
+  #canvas{display:block;width:100%;height:100%;touch-action:none}
+  .stage-top{position:absolute;left:19px;right:19px;top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:none}
+  .stage-tag{display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:.16em;color:var(--muted);font-weight:600}
+  .stage-tag span{display:inline-grid;place-items:center;width:21px;height:21px;border:1px solid var(--line);border-radius:50%;font-family:var(--mono);font-size:8.5px;letter-spacing:0;color:var(--ink-soft)}
+  .status{display:flex;align-items:center;gap:7px;padding:5px 10px 5px 9px;border:1px solid rgba(36,35,31,.12);border-radius:999px;background:rgba(250,247,239,.72);backdrop-filter:blur(8px);font-size:10px;color:var(--ink-soft);letter-spacing:.04em}
+  .status i{width:5px;height:5px;border-radius:50%;background:var(--red);box-shadow:0 0 0 0 rgba(201,68,47,.45);animation:pulse 1.9s ease-out infinite}
+  .status b{font-weight:500}
+  .status.paused i{background:#9d9588;animation:none;box-shadow:none}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(201,68,47,.4)}70%{box-shadow:0 0 0 6px rgba(201,68,47,0)}100%{box-shadow:0 0 0 0 rgba(201,68,47,0)}}
+  .stage-bottom{position:absolute;left:19px;right:19px;bottom:14px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;pointer-events:none}
+  .legend{display:flex;align-items:center;gap:14px;padding:6px 10px;border:1px solid rgba(36,35,31,.09);border-radius:9px;background:rgba(250,247,239,.72);backdrop-filter:blur(6px);font-size:9px;color:var(--ink-soft)}
+  .legend span{display:flex;align-items:center;gap:5px;white-space:nowrap}
+  .legend i{display:block;width:12px;height:2px;border-radius:2px;background:var(--gold);position:relative}
+  .legend i::after{content:"";position:absolute;right:-1px;top:-2.5px;border-left:4px solid var(--gold);border-top:3px solid transparent;border-bottom:3px solid transparent}
+  .hint{display:flex;align-items:center;gap:7px;margin-left:auto;padding:6px 11px;border:1px solid rgba(36,35,31,.1);border-radius:999px;background:rgba(250,247,239,.76);backdrop-filter:blur(6px);font-size:9.5px;color:var(--ink-soft);letter-spacing:.03em}
+  .hint::before{content:"";width:6px;height:6px;border-radius:50%;border:1px solid var(--red);box-shadow:inset 0 0 0 1.5px rgba(201,68,47,.25)}
+
+  .panel{
+    grid-column:2;grid-row:2;align-self:stretch;min-height:0;overflow:auto;
+    padding:18px 18px 15px;border:1px solid rgba(36,35,31,.14);border-radius:25px;
+    background:linear-gradient(168deg,rgba(255,253,248,.79),rgba(255,251,241,.56));
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    box-shadow:0 1px 0 rgba(255,255,255,.86) inset,0 32px 80px -58px rgba(56,40,22,.62);
+    scrollbar-width:none;
+  }
+  .panel::-webkit-scrollbar{display:none}
+  .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .eyebrow{font-size:8.5px;font-weight:700;letter-spacing:.23em;color:var(--red)}
+  .panel h2{font-family:var(--serif);font-size:23px;line-height:1.2;font-weight:700;margin:3px 0 0;letter-spacing:.03em}
+  .panel-note{font-size:8.5px;letter-spacing:.12em;color:var(--muted);padding-top:4px;white-space:nowrap}
+  .panel-note::before{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--red);margin-right:6px;vertical-align:1px}
+
+  .mode-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:3px;border:1px solid rgba(36,35,31,.1);border-radius:10px;background:rgba(255,255,255,.16)}
+  .mode-tabs button{border:0;background:none;padding:6px 2px;border-radius:7px;font-size:8.5px;letter-spacing:.02em;color:var(--muted);line-height:1.2;transition:background .15s,color .15s}
+  .mode-tabs button:hover{color:var(--ink-soft)}
+  .mode-tabs button.on{background:rgba(47,117,128,.12);color:var(--teal-deep);font-weight:600}
+
+  .mode-note{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;font-size:9px;color:var(--muted);letter-spacing:.03em}
+  .mode-note b{font-family:var(--serif);font-style:italic;font-size:12px;font-weight:500;color:var(--ink-soft)}
+
+  .control{display:block;margin:8px 0 0}
+  .control[hidden]{display:none}
+  .control-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:1px}
+  .control-head .name{font-size:10.5px;color:var(--ink-soft);letter-spacing:.02em}
+  .control-head em{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--ink);margin-left:3px}
+  .control-head .value{font-family:var(--mono);font-size:10.5px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .control-head .value b{font-weight:600}
+  .control-head .value small{font-family:var(--sans);font-size:8.5px;color:var(--muted);margin-left:2px}
+  input[type=range]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:18px;margin:1px 0 0;background:transparent;outline:none;--fill:50%}
+  input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:3px;background:linear-gradient(to right,var(--red) 0 var(--fill),rgba(36,35,31,.14) var(--fill) 100%)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;margin-top:-5.5px;border-radius:50%;background:var(--paper-hi);border:2px solid var(--red);box-shadow:0 2px 5px rgba(60,40,25,.2);transition:transform .12s}
+  input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
+  input[type=range]::-moz-range-track{height:3px;border-radius:3px;background:rgba(36,35,31,.14)}
+  input[type=range]::-moz-range-progress{height:3px;border-radius:3px;background:var(--red)}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:2px solid var(--red);border-radius:50%;background:var(--paper-hi)}
+
+  .transport{display:grid;grid-template-columns:1.45fr 1fr;gap:7px;margin-top:9px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 9px;border:1px solid rgba(36,35,31,.17);border-radius:9px;background:rgba(255,255,255,.25);font-size:10px;font-weight:500;letter-spacing:.03em;transition:background .15s,border-color .15s,transform .1s}
+  .btn:hover{background:rgba(255,255,255,.55)}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--ink);border-color:var(--ink);color:#fbf8f1}
+  .btn.primary:hover{background:#13120f;border-color:#13120f}
+  .btn svg{width:12px;height:12px;display:block}
+  .btn.primary svg{width:10px;height:10px}
+  .speed-row{display:flex;align-items:center;justify-content:space-between;margin-top:7px;font-size:9px;color:var(--muted);letter-spacing:.08em}
+  .seg{display:flex;gap:2px;padding:2px;border:1px solid rgba(36,35,31,.1);border-radius:8px;background:rgba(255,255,255,.16)}
+  .seg button{border:0;background:none;padding:3px 7px;border-radius:6px;font-size:9px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .seg button:hover{color:var(--ink-soft)}
+  .seg button.on{background:rgba(201,68,47,.1);color:var(--red);font-weight:600}
+
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px;margin-top:9px}
+  .stat{padding-left:9px;border-left:1px solid rgba(36,35,31,.1);min-width:0}
+  .stat:nth-child(odd){padding-left:0;border-left:0}
+  .stat .k{display:block;font-size:8px;letter-spacing:.04em;color:var(--muted);margin-bottom:1px;white-space:nowrap}
+  .stat .v{display:flex;align-items:baseline;gap:2px;font-family:var(--serif);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .stat .v b{font-size:16px;font-weight:600;line-height:1.15}
+  .stat .v small{font-family:var(--sans);font-size:8px;font-weight:400;color:var(--muted)}
+
+  .cons-card{margin-top:8px;padding:8px 9px 7px;border:1px solid rgba(47,117,128,.17);border-radius:10px;background:rgba(47,117,128,.045)}
+  .cons-row{display:grid;grid-template-columns:52px 1fr 12px 1fr;align-items:center;gap:4px;font-size:8.5px;color:var(--muted);line-height:1.7}
+  .cons-row .lab{font-size:8px;letter-spacing:.06em;color:var(--teal-deep);font-weight:600}
+  .cons-row b{font-family:var(--mono);font-size:9.5px;font-weight:500;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+  .cons-row i{font-style:normal;color:var(--muted);font-size:8px;text-align:center}
+  .cons-loss{display:flex;justify-content:space-between;margin-top:3px;padding-top:3px;border-top:1px solid rgba(36,35,31,.07);font-size:8px;color:var(--muted)}
+  .cons-loss b{font-family:var(--mono);font-size:9px;font-weight:500;color:var(--red-deep)}
+
+  .panel-foot{margin-top:8px;padding-top:7px;border-top:1px solid var(--line-soft);font-size:8px;line-height:1.55;color:var(--muted)}
+
+  .derivation{grid-column:1/-1;grid-row:3;display:grid;grid-template-columns:1fr 1.08fr .92fr;gap:14px;min-height:0}
+  .derivation-card{min-width:0;min-height:0;overflow:hidden;padding:10px 11px 8px;border:1px solid rgba(36,35,31,.1);border-radius:13px;background:rgba(255,255,255,.2)}
+  .card-head{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+  .card-head .num{font-family:var(--mono);font-size:8px;color:var(--red);letter-spacing:.06em}
+  .card-head h3{margin:0;font-family:var(--serif);font-size:15px;font-weight:600;letter-spacing:.02em;line-height:1.2}
+  .formula{font-family:var(--serif);font-size:11.2px;line-height:2;color:var(--ink-soft)}
+  .formula b{font-weight:500;color:var(--ink);font-style:italic}
+  .compare{margin-top:5px;padding-top:5px;border-top:1px solid var(--line-soft);font-size:8.7px;line-height:1.7;color:var(--ink-soft)}
+  .compare b{font-family:var(--serif);font-weight:600;color:var(--red-deep);font-style:italic}
+  .frac{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;vertical-align:middle;line-height:1.02;margin:0 .14em;transform:translateY(-.04em)}
+  .frac .num{display:block;padding:0 .2em .06em;border-bottom:1px solid currentColor;white-space:nowrap}
+  .frac .den{display:block;padding:.06em .2em 0;white-space:nowrap}
+
+  @media (max-height:860px){
+    #app{grid-template-rows:auto minmax(0,1fr) 174px;gap:12px 18px;padding:18px 24px 18px 30px}
+    .panel{padding:14px 15px 12px}
+    .panel-head{margin-bottom:8px}
+    .panel h2{font-size:21px}
+    .control{margin-top:6px}
+    .stats{gap:5px 12px}
+    .stat .v b{font-size:15px}
+    .derivation-card{padding:8px 9px 6px}
+    .formula{font-size:10px;line-height:1.85}
+  }
+  @media (max-height:860px) and (min-width:901px){
+    body{overflow:auto}
+    #app{height:auto;min-height:100dvh;grid-template-rows:auto 540px 174px}
+    .panel{height:540px}
+  }
+  @media (max-width:1100px){
+    #app{grid-template-columns:minmax(0,1fr) 350px;padding:18px 20px 18px 24px;gap:12px 16px}
+    .formula-stamp{display:none}
+    h1{font-size:46px}
+  }
+  @media (max-width:900px){
+    body{overflow:auto}
+    #app{display:flex;flex-direction:column;height:auto;min-height:100dvh;padding:16px;gap:12px}
+    header{order:0}
+    .stage{order:1;width:100%;height:56vh;min-height:380px;flex:none}
+    .panel{order:2;width:100%;max-height:none;overflow:visible}
+    .derivation{order:3;width:100%;grid-template-columns:1fr;gap:10px;min-height:0}
+    .derivation-card{overflow:visible}
+  }
+  @media (max-width:560px){
+    #app{padding:12px;gap:10px}
+    header p{font-size:11px}
+    h1{font-size:34px}
+    .title-line .en{display:none}
+    .stage{height:52vh;min-height:340px;border-radius:20px}
+    .stage-top{left:13px;right:13px;top:11px}
+    .stage-bottom{left:13px;right:13px;bottom:11px}
+    .hint{font-size:8.5px}
+    .panel{padding:16px 14px 14px;border-radius:20px}
+  }
+  @media (prefers-reduced-motion:reduce){.status i{animation:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <div class="kicker"><a href="../index.html" title="返回 summer物理首页">← summer物理</a><span class="kicker-slash">/</span>MECHANICS · 动量与碰撞</div>
+      <div class="title-line"><h1>动量守恒</h1><span class="en">MOMENTUM &amp; COLLISION</span></div>
+      <p>两球一维碰撞：弹性、非弹性、完全非弹性。观察碰撞前后动量与动能如何变化。</p>
+    </div>
+    <div class="formula-stamp"><span>MOMENTUM</span><b>p前 = p后</b></div>
+  </header>
+
+  <section class="stage" id="stage">
+    <canvas id="canvas"></canvas>
+    <div class="stage-top">
+      <div class="stage-tag"><span>05</span>两球碰撞 / 动量</div>
+      <div class="status" id="status"><i></i><b id="statusText">碰撞前</b></div>
+    </div>
+    <div class="stage-bottom">
+      <div class="legend"><span><i></i>速度 v</span></div>
+      <div class="hint">拖动滑块 · 空格暂停</div>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="panel-head">
+      <div><div class="eyebrow">COLLISION CONTROL</div><h2>碰撞参数</h2></div>
+      <span class="panel-note">一维碰撞</span>
+    </div>
+
+    <div class="mode-tabs" id="modeTabs">
+      <button type="button" data-mode="elastic" class="on">弹性碰撞</button>
+      <button type="button" data-mode="inelastic">非弹性碰撞</button>
+      <button type="button" data-mode="perfect">完全非弹性</button>
+    </div>
+
+    <div class="mode-note"><span>恢复系数</span><b id="modeNote">e = 1</b></div>
+
+    <label class="control">
+      <span class="control-head"><span class="name">球 1 质量 <em>m₁</em></span><span class="value"><b id="m1Val">1.0</b><small>kg</small></span></span>
+      <input id="m1Range" type="range" min="0.5" max="3" step="0.1" value="1" aria-label="球1质量">
+    </label>
+    <label class="control">
+      <span class="control-head"><span class="name">球 2 质量 <em>m₂</em></span><span class="value"><b id="m2Val">2.0</b><small>kg</small></span></span>
+      <input id="m2Range" type="range" min="0.5" max="3" step="0.1" value="2" aria-label="球2质量">
+    </label>
+    <label class="control">
+      <span class="control-head"><span class="name">球 1 初速度 <em>v₁</em></span><span class="value"><b id="u1Val">3.0</b><small>m/s</small></span></span>
+      <input id="u1Range" type="range" min="-4" max="4" step="0.1" value="3" aria-label="球1初速度">
+    </label>
+    <label class="control">
+      <span class="control-head"><span class="name">球 2 初速度 <em>v₂</em></span><span class="value"><b id="u2Val">0.0</b><small>m/s</small></span></span>
+      <input id="u2Range" type="range" min="-4" max="4" step="0.1" value="0" aria-label="球2初速度">
+    </label>
+    <label class="control" id="eControl" hidden>
+      <span class="control-head"><span class="name">恢复系数 <em>e</em></span><span class="value"><b id="eVal">0.50</b></span></span>
+      <input id="eRange" type="range" min="0.1" max="0.9" step="0.05" value="0.5" aria-label="恢复系数">
+    </label>
+
+    <div class="transport">
+      <button id="playBtn" class="btn primary" type="button"><span id="playIcon"></span><span id="playText">暂停</span></button>
+      <button id="resetBtn" class="btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/></svg>
+        复位
+      </button>
+    </div>
+    <div class="speed-row">
+      <span>演示速度</span>
+      <div class="seg" id="speedSeg">
+        <button type="button" data-speed="0.5">0.5×</button>
+        <button type="button" data-speed="1" class="on">1×</button>
+        <button type="button" data-speed="1.5">1.5×</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><span class="k" id="v1Label">球 1 速度 v₁</span><span class="v"><b id="v1Val">3.00</b><small>m/s</small></span></div>
+      <div class="stat"><span class="k" id="v2Label">球 2 速度 v₂</span><span class="v"><b id="v2Val">0.00</b><small>m/s</small></span></div>
+      <div class="stat"><span class="k">总动量 p</span><span class="v"><b id="pVal">3.00</b><small>kg·m/s</small></span></div>
+      <div class="stat"><span class="k">总动能 E</span><span class="v"><b id="eVal2">4.50</b><small>J</small></span></div>
+    </div>
+
+    <div class="cons-card">
+      <div class="cons-row"><span class="lab">动量</span><b id="pBefore">3.00</b><i>→</i><b id="pAfter">—</b></div>
+      <div class="cons-row"><span class="lab">动能</span><b id="eBefore">4.50</b><i>→</i><b id="eAfter">—</b></div>
+      <div class="cons-loss"><span>碰撞损失 ΔE</span><b id="lossVal">—</b></div>
+    </div>
+
+    <div class="panel-foot">
+      动量守恒；弹性碰撞动能守恒，非弹性碰撞有动能损失。v₁ &gt; v₂ 时才会相撞。
+    </div>
+  </aside>
+
+  <section class="derivation">
+    <article class="derivation-card">
+      <div class="card-head"><span class="num">01</span><h3>动量与能量</h3></div>
+      <div class="formula">
+        动量守恒：<b>m₁v₁ + m₂v₂ = m₁v₁′ + m₂v₂′</b><br>
+        能量守恒：<br>
+        <span class="frac"><span class="num">1</span><span class="den">2</span></span>m₁v₁² +
+        <span class="frac"><span class="num">1</span><span class="den">2</span></span>m₂v₂²
+        =
+        <span class="frac"><span class="num">1</span><span class="den">2</span></span>m₁v₁′² +
+        <span class="frac"><span class="num">1</span><span class="den">2</span></span>m₂v₂′² + ΔE
+      </div>
+      <div class="compare">
+        v₁、v₂ 为碰前速度，v₁′、v₂′ 为碰后速度；ΔE 为碰撞损失的动能。
+      </div>
+    </article>
+    <article class="derivation-card">
+      <div class="card-head"><span class="num">02</span><h3>弹性碰撞</h3></div>
+      <div class="formula">
+        <b>ΔE = 0</b><br>
+        v₁′ = <span class="frac"><span class="num">(m₁ − m₂)v₁ + 2m₂v₂</span><span class="den">m₁ + m₂</span></span><br>
+        v₂′ = <span class="frac"><span class="num">(m₂ − m₁)v₂ + 2m₁v₁</span><span class="den">m₁ + m₂</span></span>
+      </div>
+      <div class="compare">
+        弹性碰撞中动量与动能同时守恒，恢复系数 e = 1。
+      </div>
+    </article>
+    <article class="derivation-card">
+      <div class="card-head"><span class="num">03</span><h3>非弹性碰撞</h3></div>
+      <div class="formula">
+        <b>ΔE ≠ 0</b>；完全非弹性碰撞 ΔE 取最大值，碰后两球共同运动。<br>
+        m₁v₁ + m₂v₂ = (m₁ + m₂)v<sub>共</sub><br>
+        <span class="frac"><span class="num">1</span><span class="den">2</span></span>m₁v₁² +
+        <span class="frac"><span class="num">1</span><span class="den">2</span></span>m₂v₂²
+        =
+        <span class="frac"><span class="num">1</span><span class="den">2</span></span>(m₁ + m₂)v<sub>共</sub>² + ΔE<sub>max</sub>
+      </div>
+      <div class="compare">
+        完全非弹性碰撞后两球速度相同，动能损失达到最大值。
+      </div>
+    </article>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const TRACK_HALF = 3.75;
+
+  const canvas = $("#canvas");
+  const ctx = canvas.getContext("2d");
+  const state = {
+    mode: "elastic",
+    m1: 1,
+    m2: 2,
+    u1: 3,
+    u2: 0,
+    e: 0.5,
+    x1: -1.8,
+    x2: 0.55,
+    v1: 3,
+    v2: 0,
+    playing: true,
+    speed: 1,
+    collided: false,
+    finished: false,
+    post: null,
+    flash: 0,
+    t: 0,
+  };
+  const geom = { w: 0, h: 0, dpr: 1, cx: 0, ground: 0, scale: 100 };
+  let bgCanvas = null;
+  let last = performance.now();
+
+  const px = (x) => geom.cx + x * geom.scale;
+  const radiusOf = (m) => 0.20 + 0.10 * Math.cbrt(m);
+  const r1 = () => radiusOf(state.m1);
+  const r2 = () => radiusOf(state.m2);
+  const currentE = () => state.mode === "elastic" ? 1 : state.mode === "perfect" ? 0 : state.e;
+  const fmt = (v) => (Math.abs(v) < 0.005 ? "0.00" : v.toFixed(2));
+
+  function finalVelocities() {
+    const { m1, m2, u1, u2 } = state, e = currentE(), M = m1 + m2;
+    return {
+      v1: (m1 * u1 + m2 * u2 - m2 * e * (u1 - u2)) / M,
+      v2: (m1 * u1 + m2 * u2 + m1 * e * (u1 - u2)) / M,
+    };
+  }
+
+  function resetSim(play) {
+    state.x1 = -1.8;
+    state.x2 = 0.55;
+    state.v1 = state.u1;
+    state.v2 = state.u2;
+    state.collided = false;
+    state.finished = false;
+    state.post = null;
+    state.flash = 0;
+    state.t = 0;
+    if (play !== undefined) state.playing = play;
+    updateHud(true);
+    draw();
+  }
+
+  function collide() {
+    const f = finalVelocities();
+    // 把两球摆到刚好相切的位置
+    const contactX = state.x2 - r2();
+    state.x1 = contactX - r1();
+    state.v1 = f.v1;
+    state.v2 = f.v2;
+    state.collided = true;
+    state.flash = 1;
+    state.post = { v1: f.v1, v2: f.v2, x: contactX };
+  }
+
+  function finish() {
+    state.x1 = clamp(state.x1, -TRACK_HALF + r1(), TRACK_HALF - r1());
+    state.x2 = clamp(state.x2, -TRACK_HALF + r2(), TRACK_HALF - r2());
+    state.finished = true;
+    state.playing = false;
+    updateTransport();
+    updateHud(true);
+  }
+
+  function step(dt) {
+    if (!state.playing || state.finished) return;
+    state.t += dt;
+    state.flash = Math.max(0, state.flash - dt * 2.6);
+    const sub = 4;
+    const h = dt / sub;
+    for (let k = 0; k < sub; k++) {
+      state.x1 += state.v1 * h;
+      state.x2 += state.v2 * h;
+      if (!state.collided && state.u1 > state.u2 + 1e-6 &&
+          state.x2 - state.x1 <= r1() + r2() && state.v1 - state.v2 > 0) {
+        collide();
+        break;
+      }
+      if (state.x1 - r1() <= -TRACK_HALF || state.x2 + r2() >= TRACK_HALF) {
+        finish();
+        break;
+      }
+    }
+  }
+
+  // ------------------------------------------------------------- geometry
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(1, rect.width), h = Math.max(1, rect.height);
+    geom.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    geom.w = w; geom.h = h;
+    canvas.width = Math.round(w * geom.dpr);
+    canvas.height = Math.round(h * geom.dpr);
+    ctx.setTransform(geom.dpr, 0, 0, geom.dpr, 0, 0);
+    geom.cx = w * 0.5;
+    geom.ground = h * 0.62;
+    geom.scale = Math.min((w - 100) / (TRACK_HALF * 2), (h - 170) / 3.2);
+    buildBackground();
+    draw();
+  }
+
+  function buildBackground() {
+    const w = geom.w, h = geom.h, dpr = geom.dpr;
+    const bg = document.createElement("canvas");
+    bg.width = Math.round(w * dpr); bg.height = Math.round(h * dpr);
+    const b = bg.getContext("2d");
+    b.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const grad = b.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, "#fcf9f2"); grad.addColorStop(0.58, "#faf6ed"); grad.addColorStop(1, "#f4eee2");
+    b.fillStyle = grad; b.fillRect(0, 0, w, h);
+    const glow = b.createRadialGradient(geom.cx, geom.ground - 80, 10, geom.cx, geom.ground - 80, Math.max(w, h) * 0.65);
+    glow.addColorStop(0, "rgba(47,117,128,.035)"); glow.addColorStop(1, "rgba(47,117,128,0)");
+    b.fillStyle = glow; b.fillRect(0, 0, w, h);
+    const step = w < 620 ? 23 : 29;
+    b.fillStyle = "rgba(53,43,29,.10)";
+    for (let y = step * 0.7; y < h; y += step) for (let x = step * 0.6; x < w; x += step) {
+      b.beginPath(); b.arc(x, y, 0.85, 0, Math.PI * 2); b.fill();
+    }
+    bgCanvas = bg;
+  }
+
+  // ------------------------------------------------------------- drawing
+  function arrowHead(x, y, angle, color, size = 7) {
+    ctx.save(); ctx.fillStyle = color;
+    ctx.beginPath(); ctx.moveTo(x, y);
+    ctx.lineTo(x - Math.cos(angle - 0.42) * size, y - Math.sin(angle - 0.42) * size);
+    ctx.lineTo(x - Math.cos(angle + 0.42) * size, y - Math.sin(angle + 0.42) * size);
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  function haloText(text, x, y, color, font, align = "center", baseline = "middle") {
+    ctx.save(); ctx.font = font; ctx.textAlign = align; ctx.textBaseline = baseline;
+    ctx.lineJoin = "round"; ctx.strokeStyle = "rgba(250,247,239,.95)"; ctx.lineWidth = 5;
+    ctx.strokeText(text, x, y); ctx.fillStyle = color; ctx.fillText(text, x, y); ctx.restore();
+  }
+
+  function drawTrack() {
+    const y = geom.ground;
+    ctx.save();
+    ctx.strokeStyle = "rgba(36,35,31,.16)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px(-TRACK_HALF), y); ctx.lineTo(px(TRACK_HALF), y); ctx.stroke();
+    ctx.strokeStyle = "rgba(36,35,31,.18)";
+    for (let i = -3; i <= 3; i++) {
+      const x = px(i);
+      ctx.beginPath(); ctx.moveTo(x, y - 4); ctx.lineTo(x, y + 5); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawImpact() {
+    if (!state.collided || !state.post) return;
+    const x = px(state.post.x);
+    ctx.save();
+    ctx.strokeStyle = "rgba(183,131,16,.35)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 5]);
+    ctx.beginPath(); ctx.moveTo(x, geom.ground - 130); ctx.lineTo(x, geom.ground + 10); ctx.stroke();
+    ctx.restore();
+    haloText("碰撞点", x, geom.ground + 22, "rgba(147,103,10,.7)",
+      '500 8px "Noto Sans SC","Microsoft YaHei",sans-serif');
+  }
+
+  function drawBall(x, y, r, color, deep, label, mass, v, vLabel) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(x, geom.ground + 3, r * 0.85, r * 0.18, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(50,36,20,.10)"; ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.38, r * 0.08, x, y, r);
+    g.addColorStop(0, color === "#c9442f" ? "#e46a52" : "#5b9ba2");
+    g.addColorStop(1, color);
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = deep; ctx.stroke();
+    ctx.fillStyle = "#fbf8f1";
+    ctx.font = `600 ${Math.max(9, r * 0.34)}px "Noto Serif SC",serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(label, x, y - r * 0.08);
+    ctx.font = `500 ${Math.max(7, r * 0.19)}px "Noto Sans SC","Microsoft YaHei",sans-serif`;
+    ctx.fillStyle = "rgba(251,248,241,.78)";
+    ctx.fillText(mass, x, y + r * 0.35);
+    ctx.restore();
+
+    const speed = Math.abs(v);
+    if (speed > 0.04) {
+      const dir = Math.sign(v);
+      const len = clamp(speed * 26, 14, 118);
+      const sx = x + dir * (r + 7);
+      const ex = sx + dir * len;
+      ctx.save();
+      ctx.strokeStyle = "#b78310"; ctx.fillStyle = "#b78310"; ctx.lineWidth = 2; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(ex - dir * 5, y); ctx.stroke();
+      arrowHead(ex, y, dir > 0 ? 0 : Math.PI, "#b78310", 7);
+      ctx.restore();
+      haloText(vLabel, ex + dir * 10, y - 15, "#93670a",
+        'italic 600 11px "Cambria Math","Noto Serif SC",Georgia,serif');
+    }
+  }
+
+  function draw() {
+    if (!bgCanvas) return;
+    ctx.clearRect(0, 0, geom.w, geom.h);
+    ctx.drawImage(bgCanvas, 0, 0, geom.w, geom.h);
+    drawTrack();
+    drawImpact();
+
+    const r1p = r1() * geom.scale, r2p = r2() * geom.scale;
+    const y1 = geom.ground - r1p, y2 = geom.ground - r2p;
+    const x1 = px(state.x1), x2 = px(state.x2);
+
+    if (state.mode === "perfect" && state.collided) {
+      const contactX = x1 + r1p;
+      const contactY = (y1 + y2) / 2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(contactX, contactY, 4, 0, Math.PI * 2);
+      ctx.fillStyle = "#b78310";
+      ctx.fill();
+      ctx.restore();
+      haloText("粘合", (x1 + x2) / 2, Math.min(y1, y2) - 18, "#93670a",
+        '500 9px "Noto Sans SC","Microsoft YaHei",sans-serif');
+    }
+
+    drawBall(x1, y1, r1p, "#c9442f", "#7e1d10", "m₁", `${state.m1.toFixed(1)} kg`, state.v1, state.collided ? "v₁′" : "v₁");
+    drawBall(x2, y2, r2p, "#2f7580", "#123f47", "m₂", `${state.m2.toFixed(1)} kg`, state.v2, state.collided ? "v₂′" : "v₂");
+
+    if (state.flash > 0.01 && state.post) {
+      const cx = px(state.post.x);
+      const cy = geom.ground - (r1p + r2p) * 0.5;
+      const rad = 12 + (1 - state.flash) * 42;
+      ctx.save();
+      ctx.strokeStyle = `rgba(183,131,16,${0.55 * state.flash})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // ------------------------------------------------------------- HUD
+  function updateTransport() {
+    $("#playIcon").innerHTML = state.playing
+      ? '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="5" width="3.6" height="14" rx="1"/><rect x="13.9" y="5" width="3.6" height="14" rx="1"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.4v13.2c0 .8.9 1.3 1.6.9l10-6.6c.6-.4.6-1.4 0-1.8l-10-6.6c-.7-.4-1.6.1-1.6.9z"/></svg>';
+    $("#playText").textContent = state.playing ? "暂停" : "播放";
+  }
+
+  function updateHud(force = false) {
+    const pTotal = state.m1 * state.v1 + state.m2 * state.v2;
+    const eTotal = 0.5 * state.m1 * state.v1 * state.v1 + 0.5 * state.m2 * state.v2 * state.v2;
+    const pBefore = state.m1 * state.u1 + state.m2 * state.u2;
+    const eBefore = 0.5 * state.m1 * state.u1 * state.u1 + 0.5 * state.m2 * state.u2 * state.u2;
+    $("#v1Label").textContent = state.collided ? "球 1 速度 v₁′" : "球 1 速度 v₁";
+    $("#v2Label").textContent = state.collided ? "球 2 速度 v₂′" : "球 2 速度 v₂";
+    $("#v1Val").textContent = fmt(state.v1);
+    $("#v2Val").textContent = fmt(state.v2);
+    $("#pVal").textContent = fmt(pTotal);
+    $("#eVal2").textContent = fmt(eTotal);
+    $("#pBefore").textContent = fmt(pBefore);
+    $("#eBefore").textContent = fmt(eBefore);
+    if (state.collided && state.post) {
+      const pAfter = state.m1 * state.post.v1 + state.m2 * state.post.v2;
+      const eAfter = 0.5 * state.m1 * state.post.v1 * state.post.v1 + 0.5 * state.m2 * state.post.v2 * state.post.v2;
+      $("#pAfter").textContent = fmt(pAfter);
+      $("#eAfter").textContent = fmt(eAfter);
+      $("#lossVal").textContent = fmt(Math.max(0, eBefore - eAfter)) + " J";
+    } else {
+      $("#pAfter").textContent = "—";
+      $("#eAfter").textContent = "—";
+      $("#lossVal").textContent = "—";
+    }
+    updateStatus();
+  }
+
+  function updateStatus() {
+    const box = $("#status"), text = $("#statusText");
+    box.classList.toggle("paused", !state.playing);
+    if (!state.playing) text.textContent = state.finished ? "已离开轨道" : "已暂停";
+    else if (state.finished) text.textContent = "已离开轨道";
+    else if (state.u1 <= state.u2 + 1e-6) text.textContent = "不会相撞";
+    else if (state.collided) text.textContent = "碰撞后";
+    else text.textContent = "碰撞前";
+  }
+
+  function updateModeUI() {
+    for (const b of $("#modeTabs").querySelectorAll("button")) b.classList.toggle("on", b.dataset.mode === state.mode);
+    $("#eControl").hidden = state.mode !== "inelastic";
+    $("#modeNote").textContent = state.mode === "elastic" ? "e = 1" : state.mode === "perfect" ? "e = 0" : `e = ${state.e.toFixed(2)}`;
+    $("#eVal").textContent = state.e.toFixed(2);
+  }
+
+  function setMode(mode) {
+    state.mode = mode;
+    updateModeUI();
+    resetSim(state.playing);
+  }
+
+  function setFill(el, v) { el.style.setProperty("--fill", `${clamp(v, 0, 1) * 100}%`); }
+
+  // ------------------------------------------------------------- events
+  $("#modeTabs").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-mode]");
+    if (b) setMode(b.dataset.mode);
+  });
+
+  $("#m1Range").addEventListener("input", (e) => {
+    state.m1 = Number(e.target.value); $("#m1Val").textContent = state.m1.toFixed(1);
+    setFill(e.target, (state.m1 - 0.5) / 2.5); resetSim(state.playing);
+  });
+  $("#m2Range").addEventListener("input", (e) => {
+    state.m2 = Number(e.target.value); $("#m2Val").textContent = state.m2.toFixed(1);
+    setFill(e.target, (state.m2 - 0.5) / 2.5); resetSim(state.playing);
+  });
+  $("#u1Range").addEventListener("input", (e) => {
+    state.u1 = Number(e.target.value); $("#u1Val").textContent = state.u1.toFixed(1);
+    setFill(e.target, (state.u1 + 4) / 8); resetSim(state.playing);
+  });
+  $("#u2Range").addEventListener("input", (e) => {
+    state.u2 = Number(e.target.value); $("#u2Val").textContent = state.u2.toFixed(1);
+    setFill(e.target, (state.u2 + 4) / 8); resetSim(state.playing);
+  });
+  $("#eRange").addEventListener("input", (e) => {
+    state.e = Number(e.target.value); $("#eVal").textContent = state.e.toFixed(2);
+    $("#modeNote").textContent = `e = ${state.e.toFixed(2)}`;
+    setFill(e.target, (state.e - 0.1) / 0.8); resetSim(state.playing);
+  });
+
+  $("#playBtn").addEventListener("click", () => {
+    if (state.finished) resetSim(true);
+    else state.playing = !state.playing;
+    updateTransport(); updateHud(true); draw();
+  });
+  $("#resetBtn").addEventListener("click", () => { resetSim(true); updateTransport(); });
+  $("#speedSeg").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-speed]");
+    if (!b) return;
+    state.speed = Number(b.dataset.speed);
+    for (const x of $("#speedSeg").querySelectorAll("button")) x.classList.toggle("on", x === b);
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.target.closest("input,button")) return;
+    if (e.code === "Space") { e.preventDefault(); if (state.finished) resetSim(true); else state.playing = !state.playing; updateTransport(); updateHud(true); }
+    if (e.key === "r" || e.key === "R") { resetSim(true); updateTransport(); }
+  });
+
+  window.__collision = {
+    get state() { return { ...state, post: state.post ? { ...state.post } : null }; },
+    setMode, resetSim,
+    setParams(p) {
+      Object.assign(state, p);
+      updateModeUI();
+      resetSim(state.playing);
+    },
+  };
+
+  // ------------------------------------------------------------- loop
+  function frame(now) {
+    let dt = (now - last) / 1000; last = now;
+    if (!Number.isFinite(dt) || dt < 0) dt = 0;
+    dt = Math.min(dt, 0.05);
+    step(dt * state.speed);
+    draw();
+    updateHud();
+    requestAnimationFrame(frame);
+  }
+
+  const ro = new ResizeObserver(() => resize());
+  ro.observe($("#stage"));
+  updateModeUI();
+  updateTransport();
+  resize();
+  updateHud(true);
+  draw();
+  setFill($("#m1Range"), (state.m1 - 0.5) / 2.5);
+  setFill($("#m2Range"), (state.m2 - 0.5) / 2.5);
+  setFill($("#u1Range"), (state.u1 + 4) / 8);
+  setFill($("#u2Range"), (state.u2 + 4) / 8);
+  setFill($("#eRange"), (state.e - 0.1) / 0.8);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
